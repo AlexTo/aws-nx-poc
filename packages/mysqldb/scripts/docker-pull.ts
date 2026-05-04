@@ -8,7 +8,8 @@ try {
   await docker.getImage(image).inspect();
 } catch (e) {
   if ((e as { statusCode?: number }).statusCode !== 404) throw e;
+  const stream = await promisify(docker.pull.bind(docker))(image);
   await promisify(docker.modem.followProgress.bind(docker.modem))(
-    await promisify(docker.pull.bind(docker))(image),
+    stream as NodeJS.ReadableStream,
   );
 }
