@@ -16,6 +16,21 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@aws-nx-poc/source"]
+    "customConditions": ["@aws-nx-poc/source"],
+    "rootDir": ".",
+    "paths": {
+      ":aws-nx-poc/db1": ["./packages/db1/src/index.ts"],
+      ":aws-nx-poc/common-constructs": [
+        "./packages/common/constructs/src/index.ts"
+      ],
+      ":aws-nx-poc/postgres": ["./packages/postgres/src/index.ts"],
+      ":aws-nx-poc/mysql": ["./packages/mysql/src/index.ts"],
+      ":aws-nx-poc/postgresdb": ["./packages/postgresdb/src/index.ts"],
+      ":aws-nx-poc/mysqldb": ["./packages/mysqldb/src/index.ts"],
+      ":aws-nx-poc/api": ["./packages/api/src/index.ts"],
+      ":aws-nx-poc/website": ["./packages/website/src/index.ts"],
+      ":aws-nx-poc/common-shadcn": ["./packages/common/shadcn/src/index.ts"],
+      ":aws-nx-poc/common-shadcn/*": ["./packages/common/shadcn/src/*"]
+    }
   }
 }
