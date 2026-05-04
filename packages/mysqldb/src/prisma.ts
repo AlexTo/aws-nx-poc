@@ -42,9 +42,6 @@ const createPrismaClient = async (): Promise<PrismaClient> => {
     username: dbUser,
   }).getAuthToken();
 
-  // NOTE: This pool/adapter does not support an `allowExitOnIdle` option like Postgres.
-  // In STREAMING mode (e.g., API Gateway + Lambda), idle connections may keep
-  // the Node.js event loop active, preventing the request from completing properly.
   const adapter = new PrismaMariaDb({
     host: hostname,
     port,
@@ -54,6 +51,8 @@ const createPrismaClient = async (): Promise<PrismaClient> => {
     ssl: {
       rejectUnauthorized: true,
     },
+    minimumIdle: 0,
+    idleTimeout: 1,
   });
 
   return new PrismaClient({ adapter });

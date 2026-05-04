@@ -87,6 +87,7 @@ export class Api<
           ),
         ),
         timeout: Duration.seconds(30),
+        memorySize: 256,
         tracing: Tracing.ACTIVE,
       },
       buildDefaultIntegration: (op, props: FunctionProps) => {

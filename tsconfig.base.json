@@ -30,7 +30,8 @@
       ":aws-nx-poc/api": ["./packages/api/src/index.ts"],
       ":aws-nx-poc/website": ["./packages/website/src/index.ts"],
       ":aws-nx-poc/common-shadcn": ["./packages/common/shadcn/src/index.ts"],
-      ":aws-nx-poc/common-shadcn/*": ["./packages/common/shadcn/src/*"]
+      ":aws-nx-poc/common-shadcn/*": ["./packages/common/shadcn/src/*"],
+      ":aws-nx-poc/infra": ["./packages/infra/src/index.ts"]
     }
   }
 }

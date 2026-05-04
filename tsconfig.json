@@ -20,6 +20,9 @@
     },
     {
       "path": "./packages/common/shadcn"
+    },
+    {
+      "path": "./packages/infra"
     }
   ]
 }

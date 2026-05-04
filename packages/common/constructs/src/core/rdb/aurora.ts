@@ -195,8 +195,8 @@ export abstract class AuroraDatabase extends Construct {
       defaultDatabaseName: databaseName,
       storageEncrypted: true,
       storageEncryptionKey: key,
-      deletionProtection: true,
-      removalPolicy: RemovalPolicy.RETAIN,
+      deletionProtection: false, // set to false for testing purposes
+      removalPolicy: RemovalPolicy.DESTROY, // set to DESTROY for testing purposes
     });
 
     if (enableCredentialRotation) {
@@ -292,6 +292,7 @@ export abstract class AuroraDatabase extends Construct {
       tracing: Tracing.ACTIVE,
       vpc,
       environment: {
+        DATABASE_SECRET_ARN: this.cluster.secret!.secretArn,
         HOSTNAME: databaseHostname,
         DATABASE: databaseName,
         PORT: databasePort.toString(),
@@ -300,11 +301,10 @@ export abstract class AuroraDatabase extends Construct {
       architecture: Architecture.ARM_64,
     });
 
-    this.allowDefaultPortFrom(
-      migrationHandler,
-      'Allow the migration handler to connect to the database',
-    );
+    this.allowDefaultPortFrom(migrationHandler);
+    this.cluster.connections.allowDefaultPortFrom(migrationHandler);
     this.grantConnect(migrationHandler);
+    this.grantSecretRead(migrationHandler);
 
     const trigger = new Trigger(this, 'MigrationTrigger', {
       handler: migrationHandler,
@@ -335,9 +335,7 @@ export abstract class AuroraDatabase extends Construct {
   }
 
   public grantSecretRead(grantee: IGrantable) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const secret = this.cluster.secret!;
-    return secret.grantRead(grantee);
+    return this.cluster.secret!.grantRead(grantee);
   }
 
   public grantConnect(grantee: IGrantable) {
