@@ -16,6 +16,13 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@aws-nx-poc/source"]
+    "customConditions": ["@aws-nx-poc/source"],
+    "rootDir": ".",
+    "paths": {
+      ":aws-nx-poc/db1": ["./packages/db1/src/index.ts"],
+      ":aws-nx-poc/common-constructs": [
+        "./packages/common/constructs/src/index.ts"
+      ]
+    }
   }
 }
