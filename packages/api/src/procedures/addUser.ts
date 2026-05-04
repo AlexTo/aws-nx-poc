@@ -7,5 +7,9 @@ export const addUser = publicProcedure
   .output(UserSchema)
   .mutation(async ({ input }) => {
     const prisma = await getPrisma();
-    return prisma.user.create({ data: input });
+    try {
+      return await prisma.user.create({ data: input });
+    } finally {
+      await prisma.$disconnect();
+    }
   });

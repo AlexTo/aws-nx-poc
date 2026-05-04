@@ -7,5 +7,9 @@ export const listUsers = publicProcedure
   .output(z.array(UserSchema))
   .query(async () => {
     const prisma = await getPrisma();
-    return prisma.user.findMany();
+    try {
+      return await prisma.user.findMany();
+    } finally {
+      await prisma.$disconnect();
+    }
   });
