@@ -7,5 +7,9 @@ export const listCompanies = publicProcedure
   .output(z.array(CompanySchema))
   .query(async () => {
     const prisma = await getPrisma();
-    return prisma.company.findMany();
+    try {
+      return prisma.company.findMany();
+    } finally {
+      await prisma.$disconnect();
+    }
   });
