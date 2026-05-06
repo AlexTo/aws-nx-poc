@@ -1,0 +1,25 @@
+import { defineConfig } from 'prisma/config';
+
+const getDatabaseUrl = async () => {
+  if (process.env.SERVE_LOCAL === 'true') {
+    const {
+      LOCAL_DB_HOST,
+      LOCAL_DB_NAME,
+      LOCAL_DB_PASSWORD,
+      LOCAL_DB_PORT,
+      LOCAL_DB_USER,
+    } = await import('./src/constants.js');
+    return `mysql://${LOCAL_DB_USER}:${LOCAL_DB_PASSWORD}@${LOCAL_DB_HOST}:${LOCAL_DB_PORT}/${LOCAL_DB_NAME}`;
+  }
+  return process.env.DATABASE_URL;
+};
+
+export default defineConfig({
+  schema: 'prisma/',
+  migrations: {
+    path: 'prisma/migrations',
+  },
+  datasource: {
+    url: await getDatabaseUrl(),
+  },
+});

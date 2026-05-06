@@ -16,6 +16,17 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@aws-nx-poc/source"]
+    "customConditions": ["@ts-rdb-terraform/source"],
+    "rootDir": ".",
+    "paths": {
+      ":ts-rdb-terraform/postgresdb": ["./packages/postgresdb/src/index.ts"],
+      ":ts-rdb-terraform/mysqldb": ["./packages/mysqldb/src/index.ts"],
+      ":ts-rdb-terraform/api": ["./packages/api/src/index.ts"],
+      ":ts-rdb-terraform/website": ["./packages/website/src/index.ts"],
+      ":ts-rdb-terraform/common-shadcn": [
+        "./packages/common/shadcn/src/index.ts"
+      ],
+      ":ts-rdb-terraform/common-shadcn/*": ["./packages/common/shadcn/src/*"]
+    }
   }
 }

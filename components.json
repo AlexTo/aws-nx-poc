@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "packages/common/shadcn/src/styles/globals.css",
+    "baseColor": "zinc",
+    "cssVariables": true
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": ":ts-rdb-terraform/common-shadcn/components",
+    "utils": ":ts-rdb-terraform/common-shadcn/lib/utils",
+    "hooks": ":ts-rdb-terraform/common-shadcn/hooks",
+    "lib": ":ts-rdb-terraform/common-shadcn/lib",
+    "ui": ":ts-rdb-terraform/common-shadcn/components/ui"
+  }
+}

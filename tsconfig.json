@@ -2,5 +2,21 @@
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],
-  "references": []
+  "references": [
+    {
+      "path": "./packages/postgresdb"
+    },
+    {
+      "path": "./packages/mysqldb"
+    },
+    {
+      "path": "./packages/api"
+    },
+    {
+      "path": "./packages/website"
+    },
+    {
+      "path": "./packages/common/shadcn"
+    }
+  ]
 }

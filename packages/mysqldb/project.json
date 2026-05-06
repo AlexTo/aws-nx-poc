@@ -1,0 +1,114 @@
+{
+  "name": "@ts-rdb-terraform/mysqldb",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/mysqldb/src",
+  "projectType": "library",
+  "tags": [],
+  "metadata": {
+    "generator": "ts#project",
+    "ports": [3306]
+  },
+  "targets": {
+    "build": {
+      "dependsOn": ["lint", "compile", "test", "bundle", "docker"]
+    },
+    "compile": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/tsc"],
+      "options": {
+        "command": "tsc --build tsconfig.lib.json",
+        "cwd": "{projectRoot}"
+      },
+      "dependsOn": ["generate"]
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "cache": true,
+      "inputs": ["eslint"],
+      "configurations": {
+        "fix": {
+          "fix": true
+        },
+        "skip-lint": {
+          "force": true
+        }
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "{workspaceRoot}/coverage/{projectRoot}"
+      }
+    },
+    "bundle": {
+      "cache": true,
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/bundle"],
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "{projectRoot}",
+        "commands": [
+          "rimraf ../../dist/{projectRoot}/bundle/migration",
+          "make-dir ../../dist/{projectRoot}/bundle/migration",
+          "ncp prisma ../../dist/{projectRoot}/bundle/migration/prisma",
+          "ncp prisma.config.ts ../../dist/{projectRoot}/bundle/migration/prisma.config.ts",
+          "ncp Dockerfile ../../dist/{projectRoot}/bundle/migration/Dockerfile",
+          "rolldown -c rolldown.config.ts"
+        ],
+        "parallel": false
+      },
+      "dependsOn": ["compile"]
+    },
+    "generate": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/generated/prisma"],
+      "options": {
+        "command": "prisma generate",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "docker-pull": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx scripts/docker-pull.ts mysql",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "serve-local": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx scripts/docker-start.ts ts-rdb-terraform-mysqldb 3306 mysqldb password",
+        "cwd": "{projectRoot}"
+      },
+      "continuous": true,
+      "dependsOn": ["docker-pull"]
+    },
+    "wait-for-db": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["serve-local"],
+      "options": {
+        "command": "tsx scripts/wait-for-db.ts 3306 mysqldb root password",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "prisma": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["serve-local", "wait-for-db"],
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "prisma",
+        "env": {
+          "SERVE_LOCAL": "true"
+        }
+      }
+    },
+    "docker": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker build --platform linux/arm64 --provenance=false -t ts-rdb-terraform-mysqldb-migration:latest dist/packages/mysqldb/bundle/migration"
+      },
+      "dependsOn": ["bundle"]
+    }
+  }
+}

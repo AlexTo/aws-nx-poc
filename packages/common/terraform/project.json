@@ -1,0 +1,74 @@
+{
+  "name": "@ts-rdb-terraform/terraform",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/common/terraform/src",
+  "targets": {
+    "build": {
+      "dependsOn": [
+        "fmt",
+        "test",
+        "reset-runtime-config",
+        "@ts-rdb-terraform/api:build",
+        "@ts-rdb-terraform/website:build"
+      ]
+    },
+    "fmt": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default"],
+      "options": {
+        "command": "terraform fmt",
+        "forwardAllArgs": true,
+        "cwd": "{projectRoot}/src"
+      }
+    },
+    "init": {
+      "executor": "nx:run-commands",
+      "defaultConfiguration": "dev",
+      "configurations": {
+        "dev": {
+          "command": "terraform init"
+        }
+      },
+      "options": {
+        "forwardAllArgs": true,
+        "cwd": "{projectRoot}/src"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/checkov"],
+      "options": {
+        "command": "uvx --from checkov==3.2.526 checkov --directory . -o cli -o json --output-file-path console,../../../../dist/{projectRoot}/checkov/checkov_report.json",
+        "forwardAllArgs": true,
+        "cwd": "{projectRoot}/src"
+      }
+    },
+    "validate": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default"],
+      "options": {
+        "command": "terraform validate",
+        "forwardAllArgs": true,
+        "cwd": "{projectRoot}/src"
+      },
+      "dependsOn": ["init"]
+    },
+    "reset-runtime-config": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx scripts/reset-runtime-config.ts",
+        "cwd": "{projectRoot}",
+        "env": {
+          "DIST_DIR": "{workspaceRoot}/dist/{projectRoot}"
+        }
+      }
+    }
+  },
+  "metadata": {
+    "generator": "terraform#project"
+  }
+}
