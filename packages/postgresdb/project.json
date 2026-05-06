@@ -46,26 +46,18 @@
       "outputs": ["{workspaceRoot}/dist/{projectRoot}/bundle"],
       "executor": "nx:run-commands",
       "options": {
-        "command": "rolldown -c rolldown.config.ts",
-        "cwd": "{projectRoot}"
-      },
-      "dependsOn": ["compile", "bundle-migration"]
-    },
-    "bundle-migration": {
-      "cache": true,
-      "executor": "nx:run-commands",
-      "outputs": ["{workspaceRoot}/dist/{projectRoot}/bundle/migration"],
-      "options": {
         "commands": [
           "rimraf ../../dist/{projectRoot}/bundle/migration",
           "make-dir ../../dist/{projectRoot}/bundle/migration",
           "ncp prisma ../../dist/{projectRoot}/bundle/migration/prisma",
           "ncp prisma.config.ts ../../dist/{projectRoot}/bundle/migration/prisma.config.ts",
-          "ncp Dockerfile ../../dist/{projectRoot}/bundle/migration/Dockerfile"
+          "ncp Dockerfile ../../dist/{projectRoot}/bundle/migration/Dockerfile",
+          "rolldown -c rolldown.config.ts"
         ],
         "cwd": "{projectRoot}",
         "parallel": false
-      }
+      },
+      "dependsOn": ["compile"]
     },
     "generate": {
       "executor": "nx:run-commands",

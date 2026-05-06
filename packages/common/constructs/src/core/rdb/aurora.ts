@@ -36,6 +36,11 @@ export type AuroraDatabaseEngineVersion =
 
 export interface AuroraDatabaseEngine {
   /**
+   * Discriminant identifying the engine type.
+   */
+  readonly type: 'mysql' | 'postgres';
+
+  /**
    * Default Aurora engine version used when one is not explicitly provided.
    */
   readonly defaultVersion: AuroraDatabaseEngineVersion;
@@ -53,6 +58,7 @@ export class AuroraDatabaseEngines {
     defaultVersion?: AuroraMysqlEngineVersion;
   }): AuroraDatabaseEngine {
     return {
+      type: 'mysql',
       defaultVersion,
       clusterEngine: (version) =>
         DatabaseClusterEngine.auroraMysql({
@@ -67,6 +73,7 @@ export class AuroraDatabaseEngines {
     defaultVersion?: AuroraPostgresEngineVersion;
   }): AuroraDatabaseEngine {
     return {
+      type: 'postgres',
       defaultVersion,
       clusterEngine: (version) =>
         DatabaseClusterEngine.auroraPostgres({
@@ -195,8 +202,8 @@ export abstract class AuroraDatabase extends Construct {
       defaultDatabaseName: databaseName,
       storageEncrypted: true,
       storageEncryptionKey: key,
-      deletionProtection: false, // set to false for testing purposes
-      removalPolicy: RemovalPolicy.DESTROY, // set to DESTROY for testing purposes
+      deletionProtection: false,
+      removalPolicy: RemovalPolicy.DESTROY,
     });
 
     if (enableCredentialRotation) {
@@ -283,28 +290,32 @@ export abstract class AuroraDatabase extends Construct {
     const migrationHandler = new DockerImageFunction(this, 'MigrationHandler', {
       code: DockerImageCode.fromImageAsset(migrationBundleDir, {
         platform: Platform.LINUX_ARM64,
-        buildArgs: {
-          AWS_REGION: Stack.of(this).region,
-        },
       }),
       memorySize: 1024,
       timeout: Duration.minutes(5),
       tracing: Tracing.ACTIVE,
       vpc,
-      environment: {
-        DATABASE_SECRET_ARN: this.cluster.secret!.secretArn,
-        HOSTNAME: databaseHostname,
-        DATABASE: databaseName,
-        PORT: databasePort.toString(),
-        DBUSER: this.dbUser,
-      },
+      environment:
+        engine.type === 'mysql'
+          ? {
+              DATABASE_SECRET_ARN: this.cluster.secret!.secretArn,
+            }
+          : {
+              HOSTNAME: databaseHostname,
+              DATABASE: databaseName,
+              PORT: databasePort.toString(),
+              DBUSER: this.dbUser,
+            },
       architecture: Architecture.ARM_64,
     });
 
-    this.allowDefaultPortFrom(migrationHandler);
-    this.cluster.connections.allowDefaultPortFrom(migrationHandler);
-    this.grantConnect(migrationHandler);
-    this.grantSecretRead(migrationHandler);
+    if (engine.type === 'mysql') {
+      this.cluster.connections.allowDefaultPortFrom(migrationHandler);
+      this.grantSecretRead(migrationHandler);
+    } else {
+      this.allowDefaultPortFrom(migrationHandler);
+      this.grantConnect(migrationHandler);
+    }
 
     const trigger = new Trigger(this, 'MigrationTrigger', {
       handler: migrationHandler,
