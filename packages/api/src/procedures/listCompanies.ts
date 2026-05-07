@@ -8,7 +8,7 @@ export const listCompanies = publicProcedure
   .query(async () => {
     const prisma = await getPrisma();
     try {
-      return prisma.company.findMany();
+      return await prisma.company.findMany();
     } finally {
       await prisma.$disconnect();
     }

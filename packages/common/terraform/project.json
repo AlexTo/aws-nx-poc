@@ -10,6 +10,8 @@
         "test",
         "reset-runtime-config",
         "@ts-rdb-terraform/api:build",
+        "@ts-rdb-terraform/postgresdb:build",
+        "@ts-rdb-terraform/mysqldb:build",
         "@ts-rdb-terraform/website:build"
       ]
     },
