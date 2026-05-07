@@ -75,6 +75,12 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
+variable "memory_size" {
+  description = "Amount of memory, in MB, allocated to the Lambda function."
+  type        = number
+  default     = 256
+}
+
 # Get current AWS region and account ID
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
@@ -164,7 +170,7 @@ resource "aws_lambda_function" "api_lambda" {
   handler         = "index.handler"
   runtime         = "nodejs22.x"
   timeout         = 30
-  memory_size     = 128
+  memory_size     = var.memory_size
 
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
