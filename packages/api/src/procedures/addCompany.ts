@@ -7,5 +7,5 @@ export const addCompany = publicProcedure
   .output(CompanySchema)
   .mutation(async ({ input }) => {
     const prisma = await getPrisma();
-    return prisma.company.create({ data: input });
+    return await prisma.company.create({ data: input });
   });
