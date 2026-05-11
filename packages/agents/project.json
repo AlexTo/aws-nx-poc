@@ -1,0 +1,241 @@
+{
+  "name": "@aws-nx-poc/agents",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/agents/src",
+  "projectType": "library",
+  "tags": [],
+  "metadata": {
+    "generator": "ts#project",
+    "ports": [8081, 9000, 8000],
+    "components": [
+      {
+        "generator": "ts#strands-agent",
+        "path": "src/http-agent",
+        "name": "http-agent",
+        "port": 8081,
+        "rc": "HttpAgent",
+        "auth": "IAM",
+        "protocol": "HTTP"
+      },
+      {
+        "generator": "ts#strands-agent",
+        "path": "src/a2a-agent",
+        "name": "a2a-agent",
+        "port": 9000,
+        "rc": "A2aAgent",
+        "auth": "IAM",
+        "protocol": "A2A"
+      },
+      {
+        "generator": "ts#mcp-server",
+        "path": "src/mcp-server",
+        "name": "mcp-server",
+        "port": 8000,
+        "rc": "AgentsMcpServer",
+        "auth": "IAM"
+      }
+    ]
+  },
+  "targets": {
+    "build": {
+      "dependsOn": ["lint", "compile", "test", "bundle", "docker"]
+    },
+    "compile": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/tsc"],
+      "options": {
+        "command": "tsc --build tsconfig.lib.json",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "cache": true,
+      "inputs": ["eslint"],
+      "configurations": {
+        "fix": {
+          "fix": true
+        },
+        "skip-lint": {
+          "force": true
+        }
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "{workspaceRoot}/coverage/{projectRoot}"
+      }
+    },
+    "bundle": {
+      "cache": true,
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/bundle"],
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rolldown -c rolldown.config.ts",
+        "cwd": "{projectRoot}"
+      },
+      "dependsOn": ["compile"]
+    },
+    "http-agent-docker": {
+      "cache": true,
+      "outputs": [
+        "{workspaceRoot}/dist/packages/agents/bundle/agent/http-agent/Dockerfile"
+      ],
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "ncp packages/agents/src/http-agent/Dockerfile dist/packages/agents/bundle/agent/http-agent/Dockerfile",
+          "docker build --platform linux/arm64 -t aws-nx-poc-http-agent:latest dist/packages/agents/bundle/agent/http-agent"
+        ],
+        "parallel": false
+      },
+      "dependsOn": ["bundle"]
+    },
+    "docker": {
+      "dependsOn": [
+        "http-agent-docker",
+        "a2a-agent-docker",
+        "mcp-server-docker"
+      ]
+    },
+    "http-agent-serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx --watch ./src/http-agent/index.ts"],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "8081"
+        }
+      },
+      "continuous": true
+    },
+    "http-agent-serve-local": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx --watch ./src/http-agent/index.ts"],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "8081",
+          "SERVE_LOCAL": "true"
+        }
+      },
+      "continuous": true
+    },
+    "http-agent-chat": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx ./scripts/http-agent/chat.ts"],
+        "cwd": "{projectRoot}",
+        "env": {
+          "URL": "ws://localhost:8081/ws"
+        }
+      },
+      "dependsOn": ["http-agent-serve-local"]
+    },
+    "a2a-agent-docker": {
+      "cache": true,
+      "outputs": [
+        "{workspaceRoot}/dist/packages/agents/bundle/agent/a2a-agent/Dockerfile"
+      ],
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "ncp packages/agents/src/a2a-agent/Dockerfile dist/packages/agents/bundle/agent/a2a-agent/Dockerfile",
+          "docker build --platform linux/arm64 -t aws-nx-poc-a2a-agent:latest dist/packages/agents/bundle/agent/a2a-agent"
+        ],
+        "parallel": false
+      },
+      "dependsOn": ["bundle"]
+    },
+    "a2a-agent-serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx --watch ./src/a2a-agent/index.ts"],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "9000"
+        }
+      },
+      "continuous": true
+    },
+    "a2a-agent-serve-local": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx --watch ./src/a2a-agent/index.ts"],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "9000",
+          "SERVE_LOCAL": "true"
+        }
+      },
+      "continuous": true
+    },
+    "a2a-agent-chat": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["agent-chat-cli a2a http://localhost:9000"],
+        "cwd": "{projectRoot}",
+        "env": {
+          "URL": "http://localhost:9000"
+        }
+      },
+      "dependsOn": ["a2a-agent-serve-local"]
+    },
+    "mcp-server-docker": {
+      "cache": true,
+      "outputs": [
+        "{workspaceRoot}/dist/packages/agents/bundle/mcp/agents-mcp-server/Dockerfile"
+      ],
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "ncp packages/agents/src/mcp-server/Dockerfile dist/packages/agents/bundle/mcp/agents-mcp-server/Dockerfile",
+          "docker build --platform linux/arm64 -t aws-nx-poc-agents-mcp-server:latest dist/packages/agents/bundle/mcp/agents-mcp-server"
+        ],
+        "parallel": false
+      },
+      "dependsOn": ["bundle"]
+    },
+    "mcp-server-serve-stdio": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx --watch ./src/mcp-server/stdio.ts"],
+        "cwd": "{projectRoot}"
+      },
+      "continuous": true
+    },
+    "mcp-server-serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx --watch ./src/mcp-server/http.ts"],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "8000"
+        }
+      },
+      "continuous": true
+    },
+    "mcp-server-serve-local": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx --watch ./src/mcp-server/http.ts"],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "8000",
+          "SERVE_LOCAL": "true"
+        }
+      },
+      "continuous": true
+    },
+    "mcp-server-inspect": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["mcp-inspector -- tsx --watch ./src/mcp-server/stdio.ts"],
+        "cwd": "{projectRoot}"
+      },
+      "continuous": true
+    }
+  }
+}

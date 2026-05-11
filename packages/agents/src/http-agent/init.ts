@@ -1,0 +1,9 @@
+import { initTRPC } from '@trpc/server';
+
+export interface Context {
+  sessionId: string;
+}
+
+export const t = initTRPC.context<Context>().create();
+
+export const publicProcedure = t.procedure;

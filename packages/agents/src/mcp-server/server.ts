@@ -1,0 +1,18 @@
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerDivideTool } from './tools/divide.js';
+import { registerSampleGuidanceResource } from './resources/sample-guidance.js';
+
+/**
+ * Create the MCP Server
+ */
+export const createServer = () => {
+  const server = new McpServer({
+    name: 'agents-mcp-server',
+    version: '1.0.0',
+  });
+
+  registerDivideTool(server);
+  registerSampleGuidanceResource(server);
+
+  return server;
+};

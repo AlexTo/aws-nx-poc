@@ -2,5 +2,24 @@
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],
-  "references": []
+  "references": [
+    {
+      "path": "./packages/my-sql-db"
+    },
+    {
+      "path": "./packages/common/constructs"
+    },
+    {
+      "path": "./packages/postgres-db"
+    },
+    {
+      "path": "./packages/trpc"
+    },
+    {
+      "path": "./packages/smithy/backend"
+    },
+    {
+      "path": "./packages/agents"
+    }
+  ]
 }

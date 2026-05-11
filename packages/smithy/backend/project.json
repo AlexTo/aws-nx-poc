@@ -1,0 +1,105 @@
+{
+  "name": "@aws-nx-poc/smithy",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/smithy/backend/src",
+  "projectType": "library",
+  "tags": [],
+  "metadata": {
+    "generator": "ts#smithy-api",
+    "apiName": "smithy",
+    "auth": "None",
+    "modelProject": "@aws-nx-poc/smithy-model",
+    "ports": [3001]
+  },
+  "targets": {
+    "build": {
+      "dependsOn": ["lint", "compile", "test", "bundle"]
+    },
+    "compile": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/tsc"],
+      "options": {
+        "command": "tsc --build tsconfig.lib.json",
+        "cwd": "{projectRoot}"
+      },
+      "dependsOn": ["copy-ssdk"]
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "cache": true,
+      "inputs": ["eslint"],
+      "configurations": {
+        "fix": {
+          "fix": true
+        },
+        "skip-lint": {
+          "force": true
+        }
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "{workspaceRoot}/coverage/{projectRoot}"
+      }
+    },
+    "bundle": {
+      "cache": true,
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/bundle"],
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rolldown -c rolldown.config.ts",
+        "cwd": "{projectRoot}"
+      },
+      "dependsOn": ["compile"]
+    },
+    "copy-ssdk": {
+      "cache": true,
+      "inputs": [
+        {
+          "dependentTasksOutputFiles": "**/*"
+        }
+      ],
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "rimraf {projectRoot}/src/generated",
+          "make-dir {projectRoot}/src/generated",
+          "ncp dist/packages/smithy/model/build/ssdk {projectRoot}/src/generated/ssdk"
+        ],
+        "parallel": false
+      },
+      "outputs": ["{projectRoot}/src/generated"],
+      "dependsOn": ["@aws-nx-poc/smithy-model:build"]
+    },
+    "watch-copy-ssdk": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nx watch --projects=@aws-nx-poc/smithy-model --includeDependentProjects -- nx run @aws-nx-poc/smithy:copy-ssdk"
+      },
+      "continuous": true
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --watch src/local-server.ts",
+        "cwd": "{projectRoot}"
+      },
+      "continuous": true,
+      "dependsOn": ["copy-ssdk", "watch-copy-ssdk"]
+    },
+    "serve-local": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx --watch src/local-server.ts",
+        "cwd": "{projectRoot}",
+        "env": {
+          "SERVE_LOCAL": "true"
+        }
+      },
+      "continuous": true,
+      "dependsOn": ["copy-ssdk", "watch-copy-ssdk"]
+    }
+  }
+}

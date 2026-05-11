@@ -1,5 +1,13 @@
 packages:
-  - packages/*
-
+  - 'packages/*'
+  - 'packages/common/*'
+  - 'packages/smithy/*'
 overrides:
-  '@aws/nx-plugin': link:../nx-plugin-for-aws/dist/packages/nx-plugin
+  '@aws/nx-plugin': 'link:../nx-plugin-for-aws/dist/packages/nx-plugin'
+allowBuilds:
+  '@prisma/engines': false
+  prisma: false
+  ssh2: false
+  cpu-features: false
+  protobufjs: false
+onlyBuiltDependencies: []
