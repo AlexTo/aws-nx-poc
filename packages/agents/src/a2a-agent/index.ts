@@ -1,3 +1,5 @@
+import { getPrisma as getPostgresDb } from ':aws-nx-poc/postgres-db';
+import { getPrisma as getMySqlDb } from ':aws-nx-poc/my-sql-db';
 import { A2AExpressServer } from '@strands-agents/sdk/a2a/express';
 import express from 'express';
 import { getAgent } from './agent.js';
@@ -9,8 +11,10 @@ void (async () => {
   const httpUrl =
     process.env.AGENTCORE_RUNTIME_URL ?? `http://localhost:${PORT}/`;
 
+  const mySqlDb = await getMySqlDb();
+  const postgresDb = await getPostgresDb();
   const server = new A2AExpressServer({
-    agent: await getAgent('default'),
+    agent: await getAgent('default', { mySqlDb, postgresDb }),
     name: 'A2aAgent',
     description:
       'A Strands Agent exposed via the Agent-to-Agent (A2A) protocol.',

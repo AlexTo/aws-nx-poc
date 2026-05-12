@@ -1,3 +1,5 @@
+import { getPrisma as getPostgresDb } from ':aws-nx-poc/postgres-db';
+import { getPrisma as getMySqlDb } from ':aws-nx-poc/my-sql-db';
 import { Agent, tool } from '@strands-agents/sdk';
 import { z } from 'zod';
 
@@ -11,7 +13,16 @@ const multiply = tool({
   callback: ({ a, b }) => a * b,
 });
 
-export const getAgent = async (sessionId: string) => {
+export const getAgent = async (
+  sessionId: string,
+  {
+    mySqlDb,
+    postgresDb,
+  }: {
+    mySqlDb: Awaited<ReturnType<typeof getMySqlDb>>;
+    postgresDb: Awaited<ReturnType<typeof getPostgresDb>>;
+  },
+) => {
   console.log(`Creating agent for session ${sessionId}`);
   return new Agent({
     systemPrompt: `You are a mathematical wizard.

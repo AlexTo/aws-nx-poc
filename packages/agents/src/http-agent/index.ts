@@ -1,3 +1,5 @@
+import { getPrisma as getPostgresDb } from ':aws-nx-poc/postgres-db';
+import { getPrisma as getMySqlDb } from ':aws-nx-poc/my-sql-db';
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'http';
 import {
@@ -15,15 +17,19 @@ import { Context } from './init.js';
 
 const PORT = parseInt(process.env.PORT || '8080');
 
-const createContext = (
+const createContext = async (
   opts: CreateHTTPContextOptions | CreateWSSContextFnOptions,
-): Context => {
+): Promise<Context> => {
+  const postgresDb = await getPostgresDb();
+  const mySqlDb = await getMySqlDb();
   const sessionId =
     ('req' in opts
       ? opts.req.headers['x-amzn-bedrock-agentcore-runtime-session-id']
       : undefined) ?? randomUUID();
   return {
     sessionId: Array.isArray(sessionId) ? sessionId[0] : sessionId,
+    mySqlDb,
+    postgresDb,
   };
 };
 

@@ -65,7 +65,17 @@
           "SERVE_LOCAL": "true"
         }
       },
-      "continuous": true
+      "continuous": true,
+      "dependsOn": [
+        {
+          "projects": ["@aws-nx-poc/my-sql-db"],
+          "target": "serve-local"
+        },
+        {
+          "projects": ["@aws-nx-poc/postgres-db"],
+          "target": "serve-local"
+        }
+      ]
     },
     "test": {
       "executor": "@nx/vitest:test",

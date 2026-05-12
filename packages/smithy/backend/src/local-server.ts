@@ -1,3 +1,5 @@
+import { getPrisma as getMySqlDb } from ':aws-nx-poc/my-sql-db';
+import { getPrisma as getPostgresDb } from ':aws-nx-poc/postgres-db';
 import { IncomingMessage, ServerResponse, createServer } from 'http';
 import { convertRequest, writeResponse } from '@aws-smithy/server-node';
 import { Logger } from '@aws-lambda-powertools/logger';
@@ -29,10 +31,14 @@ const server = createServer(async function (
   }
 
   const httpRequest = convertRequest(req);
+  const postgresDb = await getPostgresDb();
+  const mySqlDb = await getMySqlDb();
   const httpResponse = await serviceHandler.handle(httpRequest, {
     tracer,
     logger,
     metrics,
+    postgresDb,
+    mySqlDb,
   });
   return writeResponse(httpResponse, res);
 });

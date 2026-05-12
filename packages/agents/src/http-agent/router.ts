@@ -15,7 +15,8 @@ export const appRouter = router({
       }),
     )
     .subscription(async function* (opts) {
-      const agent = await getAgent(opts.ctx.sessionId);
+      const { mySqlDb, postgresDb } = opts.ctx;
+      const agent = await getAgent(opts.ctx.sessionId, { mySqlDb, postgresDb });
 
       for await (const event of agent.stream(opts.input.message)) {
         if (

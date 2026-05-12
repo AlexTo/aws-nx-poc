@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { getPrisma as getPostgresDb } from ':aws-nx-poc/postgres-db';
+import { getPrisma as getMySqlDb } from ':aws-nx-poc/my-sql-db';
 import { createServer } from './server.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import express, { Request, Response } from 'express';
@@ -10,7 +12,9 @@ app.use(express.json());
 
 app.post('/mcp', async (req: Request, res: Response) => {
   try {
-    const server = createServer();
+    const mySqlDb = await getMySqlDb();
+    const postgresDb = await getPostgresDb();
+    const server = createServer({ mySqlDb, postgresDb });
     const transport: StreamableHTTPServerTransport =
       new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
