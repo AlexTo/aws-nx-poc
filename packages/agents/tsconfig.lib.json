@@ -11,6 +11,12 @@
   "references": [
     {
       "path": "../common/agent-connection/tsconfig.lib.json"
+    },
+    {
+      "path": "../my-sql-db/tsconfig.lib.json"
+    },
+    {
+      "path": "../postgres-db/tsconfig.lib.json"
     }
   ],
   "exclude": [

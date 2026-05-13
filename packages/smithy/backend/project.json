@@ -99,7 +99,18 @@
         }
       },
       "continuous": true,
-      "dependsOn": ["copy-ssdk", "watch-copy-ssdk"]
+      "dependsOn": [
+        "copy-ssdk",
+        "watch-copy-ssdk",
+        {
+          "projects": ["@aws-nx-poc/postgres-db"],
+          "target": "serve-local"
+        },
+        {
+          "projects": ["@aws-nx-poc/my-sql-db"],
+          "target": "serve-local"
+        }
+      ]
     }
   }
 }

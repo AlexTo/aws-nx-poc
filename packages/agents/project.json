@@ -121,7 +121,17 @@
           "SERVE_LOCAL": "true"
         }
       },
-      "continuous": true
+      "continuous": true,
+      "dependsOn": [
+        {
+          "projects": ["@aws-nx-poc/my-sql-db"],
+          "target": "serve-local"
+        },
+        {
+          "projects": ["@aws-nx-poc/postgres-db"],
+          "target": "serve-local"
+        }
+      ]
     },
     "http-agent-chat": {
       "executor": "nx:run-commands",
@@ -170,7 +180,17 @@
           "SERVE_LOCAL": "true"
         }
       },
-      "continuous": true
+      "continuous": true,
+      "dependsOn": [
+        {
+          "projects": ["@aws-nx-poc/my-sql-db"],
+          "target": "serve-local"
+        },
+        {
+          "projects": ["@aws-nx-poc/postgres-db"],
+          "target": "serve-local"
+        }
+      ]
     },
     "a2a-agent-chat": {
       "executor": "nx:run-commands",
@@ -227,7 +247,17 @@
           "SERVE_LOCAL": "true"
         }
       },
-      "continuous": true
+      "continuous": true,
+      "dependsOn": [
+        {
+          "projects": ["@aws-nx-poc/my-sql-db"],
+          "target": "serve-local"
+        },
+        {
+          "projects": ["@aws-nx-poc/postgres-db"],
+          "target": "serve-local"
+        }
+      ]
     },
     "mcp-server-inspect": {
       "executor": "nx:run-commands",

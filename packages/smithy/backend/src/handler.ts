@@ -1,3 +1,5 @@
+import { getPrisma as getMySqlDb } from ':aws-nx-poc/my-sql-db';
+import { getPrisma as getPostgresDb } from ':aws-nx-poc/postgres-db';
 import {
   convertEvent,
   convertVersion1Response,
@@ -26,10 +28,14 @@ export const lambdaHandler = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
   const httpRequest = convertEvent(event);
+  const postgresDb = await getPostgresDb();
+  const mySqlDb = await getMySqlDb();
   const httpResponse = await serviceHandler.handle(httpRequest, {
     tracer,
     logger,
     metrics,
+    postgresDb,
+    mySqlDb,
   });
   const apiGatewayResponse = convertVersion1Response(httpResponse);
 
