@@ -16,6 +16,20 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@aws-nx-poc/source"]
+    "customConditions": ["@aws-nx-poc/source"],
+    "rootDir": ".",
+    "paths": {
+      ":aws-nx-poc/my-sql-db": ["./packages/my-sql-db/src/index.ts"],
+      ":aws-nx-poc/common-constructs": [
+        "./packages/common/constructs/src/index.ts"
+      ],
+      ":aws-nx-poc/postgres-db": ["./packages/postgres-db/src/index.ts"],
+      ":aws-nx-poc/trpc": ["./packages/trpc/src/index.ts"],
+      ":aws-nx-poc/smithy": ["./packages/smithy/backend/src/index.ts"],
+      ":aws-nx-poc/agents": ["./packages/agents/src/index.ts"],
+      ":aws-nx-poc/agent-connection": [
+        "./packages/common/agent-connection/src/index.ts"
+      ]
+    }
   }
 }

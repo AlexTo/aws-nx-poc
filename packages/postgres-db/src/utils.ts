@@ -1,0 +1,148 @@
+import { getAppConfig } from '@aws-lambda-powertools/parameters/appconfig';
+import {
+  GetSecretValueCommand,
+  SecretsManagerClient,
+} from '@aws-sdk/client-secrets-manager';
+
+export type DatabaseConfig = {
+  hostname: string;
+  port: number;
+  database: string;
+  adminUser: string;
+  dbUser: string;
+  region: string;
+};
+
+export type DatabaseSecret = {
+  dbname: string;
+  username: string;
+  password: string;
+  host: string;
+  port: number;
+};
+
+const databaseConfigPromises: Record<string, Promise<DatabaseConfig>> = {};
+
+const getSecretValue = async (secretArn: string): Promise<string> => {
+  const client = new SecretsManagerClient();
+  const data = await client.send(
+    new GetSecretValueCommand({
+      SecretId: secretArn,
+    }),
+  );
+
+  if (!data.SecretString) {
+    throw new Error('Database secret does not contain SecretString.');
+  }
+
+  return data.SecretString;
+};
+
+export const getDatabaseSecret = async (): Promise<DatabaseSecret> => {
+  const secretArn = process.env.DATABASE_SECRET_ARN;
+
+  if (!secretArn) {
+    throw new Error(
+      'Missing required environment variable DATABASE_SECRET_ARN.',
+    );
+  }
+
+  return JSON.parse(await getSecretValue(secretArn)) as DatabaseSecret;
+};
+
+const loadDatabaseConfig = async (
+  runtimeConfigKey: string,
+): Promise<DatabaseConfig> => {
+  const appId = process.env.RUNTIME_CONFIG_APP_ID;
+
+  if (!appId) {
+    throw new Error(
+      'Missing required environment variable RUNTIME_CONFIG_APP_ID.',
+    );
+  }
+
+  const config = await getAppConfig<{
+    [key: string]: DatabaseConfig | undefined;
+  }>('database', {
+    application: appId,
+    environment: 'default',
+    transform: 'json',
+  });
+
+  const databaseConfig = config?.[runtimeConfigKey];
+
+  if (!databaseConfig) {
+    throw new Error(`RuntimeConfig is missing database.${runtimeConfigKey}.`);
+  }
+
+  return databaseConfig;
+};
+
+export const getDatabaseConfig = (
+  runtimeConfigKey: string,
+): Promise<DatabaseConfig> => {
+  databaseConfigPromises[runtimeConfigKey] ??=
+    loadDatabaseConfig(runtimeConfigKey);
+  return databaseConfigPromises[runtimeConfigKey];
+};
+
+// Aurora's writer endpoint is briefly unreachable from within the VPC right
+// after the cluster reports ready, and IAM policy attachments can take tens
+// of seconds to propagate before RDS accepts an IAM auth token. Both surface
+// as errors that resolve on retry.
+const transientErrorPatterns = [
+  'ETIMEDOUT',
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'P1000', // Prisma: authentication failed
+  'ER_ACCESS_DENIED_ERROR', // MySQL: access denied
+];
+
+const asString = (value: unknown): string => {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (Buffer.isBuffer(value)) return value.toString('utf-8');
+  return String(value);
+};
+
+export const isTransientConnectionError = (error: unknown): boolean => {
+  const err = error as {
+    message?: unknown;
+    code?: unknown;
+    stderr?: unknown;
+    stdout?: unknown;
+  };
+  const haystack = [
+    error instanceof Error ? error.message : asString(err?.message),
+    asString(err?.code),
+    asString(err?.stderr),
+    asString(err?.stdout),
+  ].join('\n');
+  return transientErrorPatterns.some((p) => haystack.includes(p));
+};
+
+export const withConnectionRetry = async <T>(
+  fn: () => Promise<T>,
+  {
+    maxAttempts = 6,
+    delayMs = 10_000,
+  }: { maxAttempts?: number; delayMs?: number } = {},
+): Promise<T> => {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === maxAttempts || !isTransientConnectionError(error)) {
+        throw error;
+      }
+      const wait = delayMs * attempt;
+      console.log(
+        `Transient connection error (attempt ${attempt}/${maxAttempts}), retrying in ${wait}ms: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
+  }
+  throw new Error('unreachable');
+};

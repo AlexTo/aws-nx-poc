@@ -1,0 +1,27 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { getDatabaseSecret, withConnectionRetry } from './utils.js';
+
+const buildDatabaseUrl = async (): Promise<string> => {
+  const { host, port, dbname, username, password } = await getDatabaseSecret();
+
+  return (
+    `mysql://${encodeURIComponent(username)}` +
+    `:${encodeURIComponent(password)}` +
+    `@${host}:${port}/${dbname}` +
+    `?sslaccept=strict`
+  );
+};
+
+export const handler = async () => {
+  await withConnectionRetry(async () => {
+    const databaseUrl = await buildDatabaseUrl();
+    await promisify(execFile)('npx', ['prisma', 'migrate', 'deploy'], {
+      cwd: __dirname,
+      env: {
+        ...process.env,
+        DATABASE_URL: databaseUrl,
+      },
+    });
+  });
+};
