@@ -1,0 +1,1 @@
+pnpm exec nx generate @aws/nx-plugin:ts#dynamodb --name=MyTable --no-interactive
