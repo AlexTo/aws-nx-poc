@@ -11,15 +11,15 @@
   },
   "private": true,
   "dependencies": {
-    "@aws/nx-plugin": "0.82.0"
+    "@aws/nx-plugin": "0.114.0"
   },
   "devDependencies": {
-    "@nx/js": "22.5.3",
-    "@nx/workspace": "22.5.3",
+    "@nx/js": "22.7.1",
+    "@nx/workspace": "22.7.1",
     "@swc-node/register": "~1.11.1",
     "@swc/core": "~1.15.5",
     "@swc/helpers": "~0.5.18",
-    "nx": "22.5.3",
+    "nx": "22.7.1",
     "prettier": "~3.6.2",
     "tslib": "^2.3.0",
     "typescript": "~5.9.2"
