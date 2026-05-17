@@ -65,7 +65,17 @@
           "SERVE_LOCAL": "true"
         }
       },
-      "continuous": true
+      "continuous": true,
+      "dependsOn": [
+        {
+          "projects": ["@aws-nx-poc/table-one"],
+          "target": "serve-local"
+        },
+        {
+          "projects": ["@aws-nx-poc/table-two"],
+          "target": "serve-local"
+        }
+      ]
     },
     "test": {
       "executor": "@nx/vitest:test",

@@ -1,19 +1,29 @@
 import { Entity } from 'electrodb';
 import { getDynamoDBClient, resolveTableName } from '../client.js';
 
-// Example entity - replace with your own entities using ElectroDB
-// See https://electrodb.dev/en/modeling/entities/ for documentation
-export const createExampleEntity = async () =>
+export const createOrderItemEntity = async () =>
   new Entity(
     {
       model: {
-        entity: 'example',
+        entity: 'orderItem',
         version: '1',
-        service: 'TableOne',
+        service: 'Orders',
       },
       attributes: {
-        id: {
+        orderId: {
           type: 'string',
+          required: true,
+        },
+        productId: {
+          type: 'string',
+          required: true,
+        },
+        quantity: {
+          type: 'number',
+          required: true,
+        },
+        unitPrice: {
+          type: 'number',
           required: true,
         },
         createdAt: {
@@ -22,23 +32,16 @@ export const createExampleEntity = async () =>
           default: () => new Date().toISOString(),
           readOnly: true,
         },
-        updatedAt: {
-          type: 'string',
-          required: true,
-          default: () => new Date().toISOString(),
-          watch: '*',
-          set: () => new Date().toISOString(),
-        },
       },
       indexes: {
         primary: {
           pk: {
             field: 'pk',
-            composite: ['id'],
+            composite: ['orderId'],
           },
           sk: {
             field: 'sk',
-            composite: [],
+            composite: ['productId'],
           },
         },
       },

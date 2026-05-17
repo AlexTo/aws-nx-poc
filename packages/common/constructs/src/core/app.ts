@@ -26,6 +26,13 @@ class MetricsAspect implements IAspect {
         'g30',
         'g18',
         'g5',
+        'g46',
+        'g47',
+        'g45',
+        'g44',
+        'g7',
+        'g10',
+        'g8',
       ];
       node.templateOptions.description =
         `${node.templateOptions.description ?? ''} (${id}) (version:${version}) (tag:${tags.join(',')})`.trim();

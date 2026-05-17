@@ -35,12 +35,12 @@ WORKDIR /project/build/smithy/source/typescript-ssdk-codegen
 # Install SSDK dependencies with pnpm cache mount
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store,id=pnpm-store \
     --mount=type=cache,target=/project/build/smithy/source/typescript-ssdk-codegen/node_modules,id=ssdk-node-modules \
-    pnpm install --prefer-offline
+    pnpm install --prefer-offline --config.confirmModulesPurge=false
 
 # Install rolldown plugins with pnpm cache mount
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store,id=pnpm-store \
     --mount=type=cache,target=/project/build/smithy/source/typescript-ssdk-codegen/node_modules,id=ssdk-node-modules \
-    pnpm add -D rolldown-plugin-dts@0.16.5 @rollup/plugin-esm-shim@0.1.8
+    pnpm add -D rolldown-plugin-dts@0.16.5 @rollup/plugin-esm-shim@0.1.8 --config.confirmModulesPurge=false
 
 RUN cat <<EOF > rolldown.config.js
 import { dts } from 'rolldown-plugin-dts';

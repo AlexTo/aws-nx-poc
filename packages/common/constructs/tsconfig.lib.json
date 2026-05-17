@@ -8,7 +8,17 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "references": [],
+  "references": [
+    {
+      "path": "../../dynamo-tables/table-two/tsconfig.lib.json"
+    },
+    {
+      "path": "../../dynamo-tables/table-one/tsconfig.lib.json"
+    },
+    {
+      "path": "../../trpc/tsconfig.lib.json"
+    }
+  ],
   "exclude": [
     "vite.config.ts",
     "vite.config.mts",

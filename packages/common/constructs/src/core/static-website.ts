@@ -17,7 +17,6 @@ import {
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 import { RuntimeConfig } from './runtime-config.js';
-import { Key } from 'aws-cdk-lib/aws-kms';
 import { CfnWebACL } from 'aws-cdk-lib/aws-wafv2';
 import { suppressRules } from './checkov.js';
 
@@ -52,17 +51,12 @@ export class StaticWebsite extends Construct {
       true,
     );
 
-    const websiteKey = new Key(this, 'WebsiteKey', {
-      enableKeyRotation: true,
-    });
-
     const accessLogsBucket = new Bucket(this, 'AccessLogsBucket', {
       versioned: false,
       enforceSSL: true,
       autoDeleteObjects: true,
       removalPolicy: RemovalPolicy.DESTROY,
-      encryption: BucketEncryption.KMS,
-      encryptionKey: websiteKey,
+      encryption: BucketEncryption.S3_MANAGED,
       objectOwnership: ObjectOwnership.OBJECT_WRITER,
       publicReadAccess: false,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
@@ -84,24 +78,20 @@ export class StaticWebsite extends Construct {
       enforceSSL: true,
       autoDeleteObjects: true,
       removalPolicy: RemovalPolicy.DESTROY,
-      encryption: BucketEncryption.KMS,
-      encryptionKey: websiteKey,
+      encryption: BucketEncryption.S3_MANAGED,
       objectOwnership: ObjectOwnership.BUCKET_OWNER_ENFORCED,
       publicReadAccess: false,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       serverAccessLogsPrefix: 'website-access-logs',
       serverAccessLogsBucket: accessLogsBucket,
     });
-    // Web ACL
-    const wafStack = new CloudfrontWebAcl(this, 'waf');
 
     // Cloudfront Distribution
     const logBucket = new Bucket(this, 'DistributionLogBucket', {
       enforceSSL: true,
       autoDeleteObjects: true,
       removalPolicy: RemovalPolicy.DESTROY,
-      encryption: BucketEncryption.KMS,
-      encryptionKey: websiteKey,
+      encryption: BucketEncryption.S3_MANAGED,
       objectOwnership: ObjectOwnership.BUCKET_OWNER_PREFERRED,
       publicReadAccess: false,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
@@ -119,7 +109,6 @@ export class StaticWebsite extends Construct {
       this,
       'CloudfrontDistribution',
       {
-        webAclId: wafStack.wafArn,
         enableLogging: true,
         logBucket: logBucket,
         defaultBehavior: {

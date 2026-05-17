@@ -99,7 +99,18 @@
         }
       },
       "continuous": true,
-      "dependsOn": ["copy-ssdk", "watch-copy-ssdk"]
+      "dependsOn": [
+        "copy-ssdk",
+        "watch-copy-ssdk",
+        {
+          "projects": ["@aws-nx-poc/table-one"],
+          "target": "serve-local"
+        },
+        {
+          "projects": ["@aws-nx-poc/table-two"],
+          "target": "serve-local"
+        }
+      ]
     }
   }
 }

@@ -7,4 +7,4 @@ export {
   LOCAL_TABLE_NAME,
 } from './constants.js';
 export { getDynamoDBClient, resolveTableName } from './client.js';
-export { createExampleEntity } from './entities/index.js';
+export { createOrderEntity, createOrderItemEntity } from './entities/index.js';

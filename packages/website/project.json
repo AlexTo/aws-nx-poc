@@ -6,7 +6,13 @@
   "tags": [],
   "metadata": {
     "generator": "ts#react-website",
-    "uxProvider": "Shadcn"
+    "uxProvider": "Shadcn",
+    "components": [
+      {
+        "generator": "ts#react-website#runtime-config",
+        "path": "src/components/RuntimeConfig"
+      }
+    ]
   },
   "targets": {
     "build": {
@@ -102,7 +108,13 @@
         "hmr": true,
         "mode": "serve-local"
       },
-      "continuous": true
+      "continuous": true,
+      "dependsOn": [
+        {
+          "projects": ["@aws-nx-poc/trpc"],
+          "target": "serve-local"
+        }
+      ]
     },
     "serve-static": {
       "executor": "@nx/web:file-server",

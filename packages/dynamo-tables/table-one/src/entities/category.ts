@@ -1,20 +1,25 @@
 import { Entity } from 'electrodb';
 import { getDynamoDBClient, resolveTableName } from '../client.js';
 
-// Example entity - replace with your own entities using ElectroDB
-// See https://electrodb.dev/en/modeling/entities/ for documentation
-export const createExampleEntity = async () =>
+export const createCategoryEntity = async () =>
   new Entity(
     {
       model: {
-        entity: 'example',
+        entity: 'category',
         version: '1',
-        service: 'TableTwo',
+        service: 'Catalog',
       },
       attributes: {
         id: {
           type: 'string',
           required: true,
+        },
+        name: {
+          type: 'string',
+          required: true,
+        },
+        description: {
+          type: 'string',
         },
         createdAt: {
           type: 'string',

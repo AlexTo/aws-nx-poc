@@ -1,15 +1,20 @@
+import TrpcClientProvider from './components/TrpcClientProvider';
+import QueryClientProvider from './components/QueryClientProvider';
+import { useRuntimeConfig } from './hooks/useRuntimeConfig';
+import RuntimeConfigProvider from './components/RuntimeConfig';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen';
 import './styles.css';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type RouterProviderContext = {};
+export type RouterProviderContext = {
+  runtimeConfig?: ReturnType<typeof useRuntimeConfig>;
+};
 
 const router = createRouter({
   routeTree,
-  context: {},
+  context: { runtimeConfig: undefined },
 });
 
 // Register the router instance for type safety
@@ -20,13 +25,20 @@ declare module '@tanstack/react-router' {
 }
 
 const App = () => {
-  return <RouterProvider router={router} context={{}} />;
+  const runtimeConfig = useRuntimeConfig();
+  return <RouterProvider router={router} context={{ runtimeConfig }} />;
 };
 
 const root = document.getElementById('root');
 root &&
   createRoot(root).render(
     <React.StrictMode>
-      <App />
+      <RuntimeConfigProvider>
+        <QueryClientProvider>
+          <TrpcClientProvider>
+            <App />
+          </TrpcClientProvider>
+        </QueryClientProvider>
+      </RuntimeConfigProvider>
     </React.StrictMode>,
   );

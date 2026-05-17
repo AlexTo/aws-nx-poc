@@ -1,4 +1,4 @@
-import { Home } from 'lucide-react';
+import { Home, List, Package, ShoppingCart, Tag } from 'lucide-react';
 
 import {
   Sidebar,
@@ -15,13 +15,12 @@ import { Link } from '@tanstack/react-router';
 import Config from '../config';
 
 export function AppSidebar() {
-  // Menu items.
   const navItems = [
-    {
-      label: 'Home',
-      to: '/',
-      icon: Home,
-    },
+    { label: 'Home', to: '/', icon: Home },
+    { label: 'Categories', to: '/categories', icon: Tag },
+    { label: 'Products', to: '/products', icon: Package },
+    { label: 'Orders', to: '/orders', icon: ShoppingCart },
+    { label: 'Order Items', to: '/order-items', icon: List },
   ];
   return (
     <Sidebar>
