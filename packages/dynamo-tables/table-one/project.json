@@ -1,0 +1,63 @@
+{
+  "name": "@aws-nx-poc/table-one",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/dynamo-tables/table-one/src",
+  "projectType": "library",
+  "tags": [],
+  "metadata": {
+    "generator": "ts#dynamodb"
+  },
+  "targets": {
+    "build": {
+      "dependsOn": ["lint", "compile", "test"]
+    },
+    "compile": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/tsc"],
+      "options": {
+        "command": "tsc --build tsconfig.lib.json",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "cache": true,
+      "inputs": ["eslint"],
+      "configurations": {
+        "fix": {
+          "fix": true
+        },
+        "skip-lint": {
+          "force": true
+        }
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "{workspaceRoot}/coverage/{projectRoot}"
+      }
+    },
+    "docker-pull": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx scripts/docker-pull.ts public.ecr.aws/aws-dynamodb-local/aws-dynamodb-local:latest",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "serve-local": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "dependsOn": ["docker-pull"],
+      "options": {
+        "commands": [
+          "tsx scripts/docker-start.ts aws-nx-poc-dynamodb public.ecr.aws/aws-dynamodb-local/aws-dynamodb-local:latest 8000",
+          "tsx scripts/create-local-table.ts aws-nx-poc-table-one 8000"
+        ],
+        "parallel": true,
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+import { initTRPC } from '@trpc/server';
+import { enterSessionContext } from ':aws-nx-poc/agent-connection';
+
+export interface Context {
+  sessionId: string;
+}
+
+export const t = initTRPC.context<Context>().create();
+
+/**
+ * Bind the inbound session onto the current async flow so downstream MCP /
+ * A2A clients forward it on outbound calls. Uses `enterWith` so the binding
+ * persists across subscription iterations.
+ */
+const sessionMiddleware = t.middleware(({ ctx, next }) => {
+  enterSessionContext(ctx.sessionId);
+  return next();
+});
+
+export const publicProcedure = t.procedure.use(sessionMiddleware);

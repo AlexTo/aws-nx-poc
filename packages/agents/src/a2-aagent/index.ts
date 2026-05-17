@@ -1,0 +1,43 @@
+import { A2AExpressServer } from '@strands-agents/sdk/a2a/express';
+import express, {
+  type Request,
+  type Response,
+  type NextFunction,
+} from 'express';
+import { randomUUID } from 'node:crypto';
+import { runWithSessionId, withSessionId } from ':aws-nx-poc/agent-connection';
+import { getAgent } from './agent.js';
+
+const PORT = parseInt(process.env.PORT || '9000');
+const HOST = '0.0.0.0';
+
+const SESSION_ID_HEADER = 'x-amzn-bedrock-agentcore-runtime-session-id';
+
+void (async () => {
+  const httpUrl =
+    process.env.AGENTCORE_RUNTIME_URL ?? `http://localhost:${PORT}/`;
+
+  const server = new A2AExpressServer({
+    agent: withSessionId(getAgent),
+    name: 'A2Aagent',
+    description:
+      'A Strands Agent exposed via the Agent-to-Agent (A2A) protocol.',
+    host: HOST,
+    port: PORT,
+    httpUrl,
+  });
+
+  const app = express();
+  app.get('/ping', (_req, res) => res.status(200).json({ status: 'Healthy' }));
+  // Bind the inbound session (or a fresh UUID) for downstream MCP / A2A calls.
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    const header = req.headers[SESSION_ID_HEADER];
+    const sessionId =
+      (Array.isArray(header) ? header[0] : header) ?? randomUUID();
+    runWithSessionId(sessionId, () => next());
+  });
+  app.use(server.createMiddleware());
+  app.listen(PORT, HOST, () => {
+    console.log(`A2A server listening on ${HOST}:${PORT}`);
+  });
+})();

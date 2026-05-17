@@ -2,5 +2,33 @@
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],
-  "references": []
+  "references": [
+    {
+      "path": "./packages/dynamo-tables/table-one"
+    },
+    {
+      "path": "./packages/common/constructs"
+    },
+    {
+      "path": "./packages/dynamo-tables/table-two"
+    },
+    {
+      "path": "./packages/trpc"
+    },
+    {
+      "path": "./packages/smithy/backend"
+    },
+    {
+      "path": "./packages/agents"
+    },
+    {
+      "path": "./packages/common/agent-connection"
+    },
+    {
+      "path": "./packages/website"
+    },
+    {
+      "path": "./packages/common/shadcn"
+    }
+  ]
 }

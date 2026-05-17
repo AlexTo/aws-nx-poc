@@ -1,0 +1,16 @@
+FROM public.ecr.aws/docker/library/node:lts-jod
+
+WORKDIR /app
+
+# Add AWS Distro for OpenTelemetry for observability
+# https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/observability-configure.html
+RUN npm install @aws/aws-distro-opentelemetry-node-autoinstrumentation@0.10.0
+
+# Copy bundled agent
+COPY index.js /app
+
+EXPOSE 9000
+
+# Auto-instrument with AWS Distro for OpenTelemetry
+# https://aws-otel.github.io/docs/getting-started/js-sdk/trace-metric-auto-instr
+CMD [ "node", "--require", "@aws/aws-distro-opentelemetry-node-autoinstrumentation/register", "index.js" ]

@@ -1,0 +1,19 @@
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
+export const registerSampleGuidanceResource = (server: McpServer) => {
+  server.registerResource(
+    'example-context',
+    'example://context',
+    {},
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.href,
+          text: `## Sample Guidance
+
+This is some guidance in markdown format!`,
+        },
+      ],
+    }),
+  );
+};

@@ -1,0 +1,123 @@
+{
+  "name": "@aws-nx-poc/website",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/website/src",
+  "projectType": "application",
+  "tags": [],
+  "metadata": {
+    "generator": "ts#react-website",
+    "uxProvider": "Shadcn"
+  },
+  "targets": {
+    "build": {
+      "dependsOn": ["lint", "compile", "bundle", "test"],
+      "options": {
+        "outputPath": "dist/{projectRoot}/bundle"
+      }
+    },
+    "bundle": {
+      "executor": "@nx/vite:build",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/{projectRoot}/bundle"
+      },
+      "configurations": {
+        "development": {
+          "mode": "development"
+        },
+        "production": {
+          "mode": "production"
+        }
+      }
+    },
+    "compile": {
+      "dependsOn": ["bundle"],
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/tsc"],
+      "options": {
+        "command": "tsc --build tsconfig.app.json",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "cache": true,
+      "inputs": ["eslint"],
+      "configurations": {
+        "fix": {
+          "fix": true
+        },
+        "skip-lint": {
+          "force": true
+        }
+      }
+    },
+    "load:runtime-config": {
+      "executor": "nx:run-commands",
+      "metadata": {
+        "description": "Load runtime config from your deployed stack for dev purposes. You must set your AWS CLI credentials whilst calling 'pnpm nx run @aws-nx-poc/website:load:runtime-config'"
+      },
+      "options": {
+        "command": "aws s3 cp s3://`aws cloudformation describe-stacks --query \"Stacks[?starts_with(StackName, 'aws-nx-poc-')][].Outputs[] | [?contains(OutputKey, 'WebsiteWebsiteBucketName')].OutputValue\" --output text`/runtime-config.json \"{projectRoot}/public/runtime-config.json\""
+      }
+    },
+    "preview": {
+      "dependsOn": ["build"],
+      "executor": "@nx/vite:preview-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "@aws-nx-poc/website:build"
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "@aws-nx-poc/website:build:development"
+        },
+        "production": {
+          "buildTarget": "@aws-nx-poc/website:build:production"
+        }
+      }
+    },
+    "serve": {
+      "executor": "@nx/vite:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "@aws-nx-poc/website:build"
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "@aws-nx-poc/website:build:development",
+          "hmr": true
+        },
+        "production": {
+          "buildTarget": "@aws-nx-poc/website:build:production",
+          "hmr": false
+        }
+      }
+    },
+    "serve-local": {
+      "executor": "@nx/vite:dev-server",
+      "options": {
+        "buildTarget": "@aws-nx-poc/website:build:development",
+        "hmr": true,
+        "mode": "serve-local"
+      },
+      "continuous": true
+    },
+    "serve-static": {
+      "executor": "@nx/web:file-server",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "@aws-nx-poc/website:build",
+        "spa": true
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "{workspaceRoot}/coverage/{projectRoot}"
+      }
+    }
+  }
+}

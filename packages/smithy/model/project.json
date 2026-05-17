@@ -1,0 +1,30 @@
+{
+  "name": "@aws-nx-poc/smithy-model",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/smithy/model/src",
+  "projectType": "library",
+  "metadata": {
+    "generator": "smithy#project",
+    "apiName": "smithy-model",
+    "backendProject": "@aws-nx-poc/smithy"
+  },
+  "targets": {
+    "build": {
+      "dependsOn": ["compile"]
+    },
+    "compile": {
+      "cache": true,
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/build"],
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "rimraf dist/{projectRoot}/build",
+          "make-dir dist/{projectRoot}/build",
+          "docker build -f {projectRoot}/build.Dockerfile --target export --output type=local,dest=dist/{projectRoot}/build {projectRoot}"
+        ],
+        "parallel": false,
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}

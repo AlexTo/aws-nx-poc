@@ -1,0 +1,11 @@
+# table-two
+
+This library was generated with [Nx](https://nx.dev).
+
+## Building
+
+Run `nx build table-two` to build the library.
+
+## Running unit tests
+
+Run `nx test table-two` to execute the unit tests via [Vitest](https://vitest.dev/).

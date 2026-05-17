@@ -1,4 +1,7 @@
 packages:
   - 'packages/*'
+  - 'packages/dynamo-tables/*'
+  - 'packages/common/*'
+  - 'packages/smithy/*'
 overrides:
-  '@aws/nx-plugin': link:../nx-plugin-for-aws/dist/packages/nx-plugin
+  '@aws/nx-plugin': 'link:../nx-plugin-for-aws/dist/packages/nx-plugin'

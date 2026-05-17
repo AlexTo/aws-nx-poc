@@ -16,6 +16,27 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@aws-nx-poc/source"]
+    "customConditions": ["@aws-nx-poc/source"],
+    "rootDir": ".",
+    "paths": {
+      ":aws-nx-poc/table-one": [
+        "./packages/dynamo-tables/table-one/src/index.ts"
+      ],
+      ":aws-nx-poc/common-constructs": [
+        "./packages/common/constructs/src/index.ts"
+      ],
+      ":aws-nx-poc/table-two": [
+        "./packages/dynamo-tables/table-two/src/index.ts"
+      ],
+      ":aws-nx-poc/trpc": ["./packages/trpc/src/index.ts"],
+      ":aws-nx-poc/smithy": ["./packages/smithy/backend/src/index.ts"],
+      ":aws-nx-poc/agents": ["./packages/agents/src/index.ts"],
+      ":aws-nx-poc/agent-connection": [
+        "./packages/common/agent-connection/src/index.ts"
+      ],
+      ":aws-nx-poc/website": ["./packages/website/src/index.ts"],
+      ":aws-nx-poc/common-shadcn": ["./packages/common/shadcn/src/index.ts"],
+      ":aws-nx-poc/common-shadcn/*": ["./packages/common/shadcn/src/*"]
+    }
   }
 }
