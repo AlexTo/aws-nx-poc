@@ -39,7 +39,6 @@ while (!container) {
           '-port',
           hostPort,
           '-optimizeDbBeforeStartup',
-          '-delayTransientStatuses',
         ],
         WorkingDir: '/home/dynamodblocal',
         ExposedPorts: { [`${hostPort}/tcp`]: {} },

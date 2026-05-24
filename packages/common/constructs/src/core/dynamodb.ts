@@ -73,35 +73,36 @@ export abstract class DynamoDBTable extends Construct {
     const rc = RuntimeConfig.ensure(this);
     rc.set('dynamodb', runtimeConfigKey, { tableName: this.table.tableName });
   }
-  grantReadData(grantee: IGrantable): Grant {
+
+  public grantReadData(grantee: IGrantable): Grant {
     return this.table.grantReadData(grantee);
   }
 
-  grantWriteData(grantee: IGrantable): Grant {
+  public grantWriteData(grantee: IGrantable): Grant {
     return this.table.grantWriteData(grantee);
   }
 
-  grantReadWriteData(grantee: IGrantable): Grant {
+  public grantReadWriteData(grantee: IGrantable): Grant {
     return this.table.grantReadWriteData(grantee);
   }
 
-  grantFullAccess(grantee: IGrantable): Grant {
+  public grantFullAccess(grantee: IGrantable): Grant {
     return this.table.grantFullAccess(grantee);
   }
 
-  grantStreamRead(grantee: IGrantable): Grant {
+  public grantStreamRead(grantee: IGrantable): Grant {
     return this.table.grantStreamRead(grantee);
   }
 
-  grantTableListStreams(grantee: IGrantable): Grant {
+  public grantTableListStreams(grantee: IGrantable): Grant {
     return this.table.grantTableListStreams(grantee);
   }
 
-  grant(grantee: IGrantable, ...actions: string[]): Grant {
+  public grant(grantee: IGrantable, ...actions: string[]): Grant {
     return this.table.grant(grantee, ...actions);
   }
 
-  grantStream(grantee: IGrantable, ...actions: string[]): Grant {
+  public grantStream(grantee: IGrantable, ...actions: string[]): Grant {
     return this.table.grantStream(grantee, ...actions);
   }
 }
