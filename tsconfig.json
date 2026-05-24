@@ -2,5 +2,27 @@
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],
-  "references": []
+  "references": [
+    {
+      "path": "./packages/common/constructs"
+    },
+    {
+      "path": "./packages/game-api"
+    },
+    {
+      "path": "./packages/inventory"
+    },
+    {
+      "path": "./packages/game-ui"
+    },
+    {
+      "path": "./packages/common/shadcn"
+    },
+    {
+      "path": "./packages/infra"
+    },
+    {
+      "path": "./packages/dynamodb"
+    }
+  ]
 }

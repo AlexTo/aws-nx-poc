@@ -1,0 +1,23 @@
+import {
+  ItemSchema,
+  QueryInputSchema,
+  createPaginatedQueryOutput,
+} from '../schema/index.js';
+import { publicProcedure } from '../init.js';
+import { z } from 'zod';
+import { createInventoryEntity } from ':aws-nx-poc/dynamodb';
+
+export const queryInventory = publicProcedure
+  .input(QueryInputSchema.extend({ playerName: z.string() }))
+  .output(createPaginatedQueryOutput(ItemSchema))
+  .query(async ({ input }) => {
+    const inventoryEntity = await createInventoryEntity();
+    const result = await inventoryEntity.query
+      .primary({ playerName: input.playerName })
+      .go({ cursor: input.cursor, count: input.limit });
+
+    return {
+      items: result.data,
+      cursor: result.cursor,
+    };
+  });

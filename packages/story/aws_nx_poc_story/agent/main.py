@@ -1,0 +1,78 @@
+import logging
+import os
+import uuid
+from functools import cache
+from typing import Any, cast
+
+from ag_ui.core import RunAgentInput
+from ag_ui_strands import StrandsAgent, StrandsAgentConfig, create_strands_app
+from aws_lambda_powertools.utilities import parameters
+from aws_nx_poc_agent_connection import session_id_context
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from strands.session import FileSessionManager, S3SessionManager, SessionManager
+
+from .agent import get_agent
+
+logging.basicConfig(level=logging.INFO)
+
+SESSION_ID_HEADER = "x-amzn-bedrock-agentcore-runtime-session-id"
+
+
+@cache
+def _resolve_sessions_bucket() -> str:
+    """Read the conversation-history bucket name from runtime config.
+
+    Resolved lazily (and memoised) so `fastapi dev` can import this module
+    before ``RUNTIME_CONFIG_APP_ID`` is in the environment.
+    """
+    application = os.environ.get("RUNTIME_CONFIG_APP_ID")
+    if not application:
+        raise RuntimeError("RUNTIME_CONFIG_APP_ID is not set — cannot resolve the StorySessions bucket.")
+    provider = parameters.AppConfigProvider(environment="default", application=application)
+    buckets = cast(dict[str, Any], provider.get("buckets", transform="json"))
+    return buckets["StorySessions"]["bucketName"]
+
+
+def _session_manager_provider(input_data: RunAgentInput) -> SessionManager:
+    """Create a session manager keyed by the AG-UI thread_id.
+
+    - In AgentCore (and `agent-serve`), persist to the shared ``StorySessions``
+      S3 bucket — the same bucket the Game API reads from to rebuild
+      conversation history on revisit.
+    - In `agent-serve-local` (`SERVE_LOCAL=true`), persist to a temp
+      directory so the agent can run fully offline against the local MCP
+      server without any AWS calls.
+    """
+    session_id = input_data.thread_id or "default"
+    if os.environ.get("SERVE_LOCAL") == "true":
+        return FileSessionManager(session_id=session_id, storage_dir="/tmp/strands-sessions")
+    return S3SessionManager(session_id=session_id, bucket=_resolve_sessions_bucket())
+
+
+# The template Agent is cloned per thread_id by ``StrandsAgent`` — we plug in
+# a ``session_manager_provider`` so each thread gets its own session manager
+# and conversation history is replayed on subsequent turns and survives agent
+# restarts.
+_agent_ctx = get_agent()
+_agent = _agent_ctx.__enter__()
+
+agui_agent = StrandsAgent(
+    agent=_agent,
+    name="StoryAgent",
+    description="A Strands Agent exposed via the AG-UI protocol.",
+    config=StrandsAgentConfig(session_manager_provider=_session_manager_provider),
+)
+
+
+class _SessionIdMiddleware(BaseHTTPMiddleware):
+    """Bind the session ID for this request so downstream MCP / A2A clients forward it on outbound calls."""
+
+    async def dispatch(self, request: Request, call_next):
+        session_id = request.headers.get(SESSION_ID_HEADER) or str(uuid.uuid4())
+        with session_id_context(session_id):
+            return await call_next(request)
+
+
+app = create_strands_app(agui_agent, path="/invocations")
+app.add_middleware(_SessionIdMiddleware)

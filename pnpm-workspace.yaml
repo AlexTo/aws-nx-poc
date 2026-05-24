@@ -1,4 +1,9 @@
 packages:
-  - 'packages/*'
+  - packages/*
+  - packages/common/*
 overrides:
   '@aws/nx-plugin': link:../nx-plugin-for-aws/dist/packages/nx-plugin
+ignoreWorkspaceRootCheck: true
+allowBuilds:
+  '@scarf/scarf': false
+onlyBuiltDependencies: []

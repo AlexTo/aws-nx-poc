@@ -1,0 +1,35 @@
+import {
+  GameSchema,
+  IGame,
+  QueryInputSchema,
+  createPaginatedQueryOutput,
+} from '../schema/index.js';
+import { publicProcedure } from '../init.js';
+
+import { createGameEntity } from ':aws-nx-poc/dynamodb';
+
+export const queryGames = publicProcedure
+  .input(QueryInputSchema)
+  .output(createPaginatedQueryOutput(GameSchema))
+  .query(async ({ input }) => {
+    const gameEntity = await createGameEntity();
+    const result = await gameEntity.scan.go({
+      cursor: input.cursor,
+      count: input.limit,
+    });
+
+    return {
+      items: result.data as IGame[],
+      cursor: result.cursor,
+    };
+  });
+
+export const saveGame = publicProcedure
+  .input(GameSchema.omit({ lastUpdated: true }))
+  .output(GameSchema)
+  .mutation(async ({ input }) => {
+    const gameEntity = await createGameEntity();
+
+    const result = await gameEntity.put(input).go();
+    return result.data as IGame;
+  });

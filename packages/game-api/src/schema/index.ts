@@ -1,0 +1,39 @@
+import { z } from 'zod';
+
+export const QueryInputSchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.number().optional().default(100),
+});
+export type IQueryInput = z.TypeOf<typeof QueryInputSchema>;
+
+export const ActionSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+  messageId: z.number(),
+});
+export type IAction = z.TypeOf<typeof ActionSchema>;
+
+export const GameSchema = z.object({
+  playerName: z.string(),
+  genre: z.enum(['zombie', 'superhero', 'medieval']),
+  lastUpdated: z.iso.datetime(),
+});
+export type IGame = z.TypeOf<typeof GameSchema>;
+
+export const ItemSchema = z.object({
+  playerName: z.string(),
+  itemName: z.string(),
+  emoji: z.string().optional(),
+  lastUpdated: z.iso.datetime(),
+  quantity: z.number(),
+});
+export type IItem = z.TypeOf<typeof ItemSchema>;
+
+export const createPaginatedQueryOutput = <ItemType extends z.ZodTypeAny>(
+  itemSchema: ItemType,
+) => {
+  return z.object({
+    items: z.array(itemSchema),
+    cursor: z.string().nullable(),
+  });
+};

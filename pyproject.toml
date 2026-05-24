@@ -1,0 +1,24 @@
+[project]
+name = "nx-workspace"
+version = "1.0.0"
+dependencies = [ "aws_nx_poc.agent_connection", "aws_nx_poc.story" ]
+
+[tool.uv.workspace]
+members = [ "packages/common/agent_connection", "packages/story" ]
+
+[tool.uv.sources."aws_nx_poc.agent_connection"]
+workspace = true
+
+[tool.uv.sources."aws_nx_poc.story"]
+workspace = true
+
+[dependency-groups]
+dev = [
+  "ruff>=0.8.2",
+  "autopep8>=2.3.1",
+  "pytest>=8.3.4",
+  "pytest-sugar>=1.0.0",
+  "pytest-cov>=6.0.0",
+  "pytest-html>=4.1.1",
+  "ty==0.0.37"
+]

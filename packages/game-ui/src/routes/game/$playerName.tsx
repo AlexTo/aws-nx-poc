@@ -1,0 +1,131 @@
+import { UseAgentUpdate, useAgent } from '@copilotkit/react-core/v2';
+import { useQuery } from '@tanstack/react-query';
+import { createFileRoute } from '@tanstack/react-router';
+import { useEffect, useMemo, useRef } from 'react';
+import { CopilotChat } from '../../components/copilot';
+import { useGameApi } from '../../hooks/useGameApi';
+import type { IGame } from ':aws-nx-poc/game-api';
+
+// AgentCore session ids must be at least 33 characters. The AG-UI hook pads
+// the threadId to this length before sending, so the thread id is stable for
+// a given (player, genre) pair — revisiting the URL continues the same story.
+const buildThreadId = (playerName: string, genre: string) =>
+  `${playerName}-${genre}`.padEnd(33, '0');
+
+export const Route = createFileRoute('/game/$playerName')({
+  component: RouteComponent,
+  validateSearch: (search: Record<string, unknown>) => ({
+    genre: search.genre as IGame['genre'],
+  }),
+});
+
+function RouteComponent() {
+  const { playerName } = Route.useParams();
+  const { genre } = Route.useSearch();
+  const threadId = useMemo(
+    () => buildThreadId(playerName, genre),
+    [playerName, genre],
+  );
+
+  const gameApi = useGameApi();
+  const inventory = useQuery(
+    gameApi.inventory.query.queryOptions({ playerName, limit: 100 }),
+  );
+  // Conversation history persisted by the agent's ``S3SessionManager``. Each
+  // turn is stored as ``session_<threadId>/agents/agent_default/messages/…``.
+  //
+  // `staleTime: 0` + `refetchOnMount: 'always'` together force a fresh read
+  // on every visit — the cached snapshot from the *first* time we loaded
+  // this route (before the agent had written any turns back to S3) would
+  // otherwise look like an empty thread on revisit and trigger re-priming.
+  const pastActions = useQuery({
+    ...gameApi.actions.query.queryOptions({ sessionId: threadId }),
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+
+  const { agent } = useAgent({
+    agentId: 'agent',
+    updates: [UseAgentUpdate.OnMessagesChanged],
+  });
+
+  // Hydrate the chat once the history query resolves. For a fresh thread
+  // (no stored messages) the agent's system prompt expects the player's
+  // name and genre in the first user message, so send that priming line.
+  //
+  // We wait for `isFetching` to go false (rather than just `isLoading`) so
+  // that revisits with a cached empty result from the first visit aren't
+  // mistaken for a fresh thread — the background refetch is what sees the
+  // turns the agent wrote since.
+  const primedRef = useRef(false);
+  useEffect(() => {
+    if (!agent || primedRef.current) return;
+    if (pastActions.isFetching || !pastActions.isSuccess) return;
+    primedRef.current = true;
+    const items = pastActions.data.items;
+    if (items.length > 0) {
+      agent.setMessages(
+        items.map((a) => ({
+          id: `m-${a.messageId}`,
+          role: a.role,
+          content: a.content,
+        })),
+      );
+      return;
+    }
+    agent.addMessage({
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: `My name is ${playerName}. Start my ${genre} adventure.`,
+    });
+    void agent.runAgent();
+  }, [
+    agent,
+    pastActions.data,
+    pastActions.isFetching,
+    pastActions.isSuccess,
+    playerName,
+    genre,
+  ]);
+
+  // The agent's ``add-to-inventory`` tool calls mutate DynamoDB directly, so
+  // the inventory query needs a nudge to refetch as turns complete. The
+  // ``useAgent({ updates: [OnMessagesChanged] })`` subscription re-renders
+  // this route on each message event — refetch whenever the message count
+  // changes, which covers both the initial populate and every subsequent
+  // turn.
+  const seenMessages = useRef(0);
+  useEffect(() => {
+    if (!agent) return;
+    if (agent.messages.length !== seenMessages.current) {
+      seenMessages.current = agent.messages.length;
+      void inventory.refetch();
+    }
+  });
+
+  return (
+    <div className="relative flex h-[calc(100vh-10rem)] min-h-0 flex-col">
+      {!!inventory.data?.items.length && (
+        <aside className="bg-accent text-accent-foreground pointer-events-none absolute right-4 top-4 z-10 w-56 rounded-lg border p-3 shadow-lg">
+          <div className="mb-1 font-semibold">📦 Inventory</div>
+          <ul className="flex flex-col gap-0.5 text-sm">
+            {inventory.data.items.map((item) => (
+              <li key={item.itemName}>
+                {item.emoji ?? '•'} {item.itemName}
+                {item.quantity > 1 ? ` (x${item.quantity})` : ''}
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )}
+      <CopilotChat
+        agentId="agent"
+        threadId={threadId}
+        labels={{
+          chatInputPlaceholder: 'What do you do?',
+          welcomeMessageText: `${playerName}'s ${genre} adventure`,
+        }}
+      />
+    </div>
+  );
+}

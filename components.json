@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "packages/common/shadcn/src/styles/globals.css",
+    "baseColor": "zinc",
+    "cssVariables": true
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": ":aws-nx-poc/common-shadcn/components",
+    "utils": ":aws-nx-poc/common-shadcn/lib/utils",
+    "hooks": ":aws-nx-poc/common-shadcn/hooks",
+    "lib": ":aws-nx-poc/common-shadcn/lib",
+    "ui": ":aws-nx-poc/common-shadcn/components/ui"
+  }
+}

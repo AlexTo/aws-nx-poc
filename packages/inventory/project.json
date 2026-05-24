@@ -1,0 +1,127 @@
+{
+  "name": "@aws-nx-poc/inventory",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/inventory/src",
+  "projectType": "library",
+  "tags": [],
+  "metadata": {
+    "generator": "ts#project",
+    "ports": [8000],
+    "components": [
+      {
+        "generator": "ts#mcp-server",
+        "path": "src/mcp-server",
+        "name": "mcp-server",
+        "port": 8000,
+        "rc": "InventoryMcpServer",
+        "auth": "IAM"
+      }
+    ]
+  },
+  "targets": {
+    "build": {
+      "dependsOn": ["lint", "compile", "test", "bundle", "docker"]
+    },
+    "compile": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/tsc"],
+      "options": {
+        "command": "tsc --build tsconfig.lib.json",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "cache": true,
+      "inputs": ["eslint"],
+      "configurations": {
+        "fix": {
+          "fix": true
+        },
+        "skip-lint": {
+          "force": true
+        }
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "reportsDirectory": "{workspaceRoot}/coverage/{projectRoot}"
+      }
+    },
+    "bundle": {
+      "cache": true,
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/bundle"],
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rolldown -c rolldown.config.ts",
+        "cwd": "{projectRoot}"
+      },
+      "dependsOn": ["compile"]
+    },
+    "mcp-server-docker": {
+      "cache": true,
+      "outputs": [
+        "{workspaceRoot}/dist/packages/inventory/bundle/mcp/inventory-mcp-server/Dockerfile"
+      ],
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "ncp packages/inventory/src/mcp-server/Dockerfile dist/packages/inventory/bundle/mcp/inventory-mcp-server/Dockerfile",
+          "docker build --platform linux/arm64 -t aws-nx-poc-inventory-mcp-server:latest dist/packages/inventory/bundle/mcp/inventory-mcp-server"
+        ],
+        "parallel": false
+      },
+      "dependsOn": ["bundle"]
+    },
+    "docker": {
+      "dependsOn": ["mcp-server-docker"]
+    },
+    "mcp-server-serve-stdio": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx --watch ./src/mcp-server/stdio.ts"],
+        "cwd": "{projectRoot}"
+      },
+      "continuous": true
+    },
+    "mcp-server-serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx --watch ./src/mcp-server/http.ts"],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "8000"
+        }
+      },
+      "continuous": true
+    },
+    "mcp-server-serve-local": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx --watch ./src/mcp-server/http.ts"],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "8000",
+          "SERVE_LOCAL": "true"
+        }
+      },
+      "continuous": true,
+      "dependsOn": [
+        {
+          "projects": ["@aws-nx-poc/dynamodb"],
+          "target": "serve-local"
+        }
+      ]
+    },
+    "mcp-server-inspect": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["mcp-inspector -- tsx --watch ./src/mcp-server/stdio.ts"],
+        "cwd": "{projectRoot}"
+      },
+      "continuous": true
+    }
+  }
+}
