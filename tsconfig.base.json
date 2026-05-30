@@ -16,6 +16,16 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@aws-nx-poc/source"]
+    "customConditions": ["@aws-nx-poc/source"],
+    "rootDir": ".",
+    "paths": {
+      ":aws-nx-poc/dynamodb1": ["./packages/dynamodb1/src/index.ts"],
+      ":aws-nx-poc/common-constructs": [
+        "./packages/common/constructs/src/index.ts"
+      ],
+      ":aws-nx-poc/dynamodb2": ["./packages/dynamodb2/src/index.ts"],
+      ":aws-nx-poc/dynamodb3": ["./packages/dynamodb3/src/index.ts"],
+      ":aws-nx-poc/api": ["./packages/api/src/index.ts"]
+    }
   }
 }
