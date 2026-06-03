@@ -25,7 +25,8 @@
       ],
       ":aws-nx-poc/dynamodb2": ["./packages/dynamodb2/src/index.ts"],
       ":aws-nx-poc/dynamodb3": ["./packages/dynamodb3/src/index.ts"],
-      ":aws-nx-poc/api": ["./packages/api/src/index.ts"]
+      ":aws-nx-poc/api": ["./packages/api/src/index.ts"],
+      ":aws-nx-poc/infra": ["./packages/infra/src/index.ts"]
     }
   }
 }

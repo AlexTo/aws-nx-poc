@@ -47,6 +47,9 @@ importers:
       '@trpc/server':
         specifier: 11.17.0
         version: 11.17.0(typescript@5.9.2)
+      aws-cdk:
+        specifier: 2.1124.1
+        version: 2.1124.1
       aws-cdk-lib:
         specifier: 2.257.0
         version: 2.257.0(constructs@10.6.0)
@@ -62,6 +65,12 @@ importers:
       electrodb:
         specifier: 3.7.5
         version: 3.7.5(@aws-sdk/client-dynamodb@3.1053.0)
+      esbuild:
+        specifier: 0.28.0
+        version: 0.28.0
+      source-map-support:
+        specifier: 0.5.21
+        version: 0.5.21
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -1965,6 +1974,11 @@ packages:
       - table
       - yaml
       - mime-types
+
+  aws-cdk@2.1124.1:
+    resolution: {integrity: sha512-sRYdPMdkX+02EHaT946AFV0w0CMfbHKWpLZPv525xTCkaVu1eYu6DzHFuTdimxdSN0uGQ2D4LHrD1sr94tRhow==}
+    engines: {node: '>= 18.0.0'}
+    hasBin: true
 
   aws-xray-sdk-core@3.12.0:
     resolution: {integrity: sha512-lwalRdxXRy+Sn49/vN7W507qqmBRk5Fy2o0a9U6XTjL9IV+oR5PUiiptoBrOcaYCiVuGld8OEbNqhm6wvV3m6A==}
@@ -5367,6 +5381,8 @@ snapshots:
       '@aws-cdk/asset-node-proxy-agent-v6': 2.1.2
       '@aws-cdk/cloud-assembly-schema': 53.28.0
       constructs: 10.6.0
+
+  aws-cdk@2.1124.1: {}
 
   aws-xray-sdk-core@3.12.0:
     dependencies:
