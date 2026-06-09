@@ -1,0 +1,31 @@
+{
+  "name": "@aws-nx-poc/source",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "build": "nx run-many --target build",
+    "lint": "nx run-many --target lint --configuration=fix",
+    "test": "nx run-many --target test --all",
+    "build:skip-lint": "nx run-many --target build --configuration=skip-lint",
+    "build:all": "nx run-many --target build --all",
+    "affected:all": "nx affected --target build",
+    "prepare": "husky"
+  },
+  "private": true,
+  "dependencies": {
+    "@aws/nx-plugin": "1.0.0-rc.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.16",
+    "@nx/js": "22.7.5",
+    "@nx/workspace": "22.7.5",
+    "@swc-node/register": "~1.11.1",
+    "@swc/core": "~1.15.5",
+    "@swc/helpers": "~0.5.18",
+    "husky": "9.1.7",
+    "nx": "22.7.5",
+    "tslib": "^2.3.0",
+    "typescript": "6.0.3"
+  },
+  "type": "module"
+}
