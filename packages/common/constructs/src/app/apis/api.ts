@@ -1,36 +1,36 @@
-import { Construct } from 'constructs';
-import * as url from 'url';
-import { Distribution } from 'aws-cdk-lib/aws-cloudfront';
-import {
-  Code,
-  Runtime,
-  Function,
-  FunctionProps,
-  Tracing,
-  LayerVersion,
-  SnapStartConf,
-} from 'aws-cdk-lib/aws-lambda';
-import { RuntimeConfig } from '../../core/runtime-config.js';
+import { Aspects, Duration, Stack } from 'aws-cdk-lib';
 import {
   AuthorizationType,
   LambdaIntegration,
   ResponseTransferMode,
 } from 'aws-cdk-lib/aws-apigateway';
-import { Aspects, Duration, Stack } from 'aws-cdk-lib';
+import { Distribution } from 'aws-cdk-lib/aws-cloudfront';
 import {
+  AnyPrincipal,
+  Effect,
+  Grant,
+  IGrantable,
   PolicyDocument,
   PolicyStatement,
-  Effect,
-  AnyPrincipal,
-  IGrantable,
-  Grant,
 } from 'aws-cdk-lib/aws-iam';
+import {
+  Code,
+  Function,
+  FunctionProps,
+  LayerVersion,
+  Runtime,
+  SnapStartConf,
+  Tracing,
+} from 'aws-cdk-lib/aws-lambda';
+import { Construct } from 'constructs';
+import * as url from 'url';
+import { AddCorsPreflightAspect, RestApi } from '../../core/api/rest-api.js';
 import {
   ApiIntegrations,
   IntegrationBuilder,
   RestApiIntegration,
 } from '../../core/api/utils.js';
-import { AddCorsPreflightAspect, RestApi } from '../../core/api/rest-api.js';
+import { RuntimeConfig } from '../../core/runtime-config.js';
 import {
   OPERATION_DETAILS,
   Operations,
@@ -125,19 +125,18 @@ export class Api<
     super(scope, id, {
       apiName: 'Api',
       defaultMethodOptions: {
-        authorizationType: AuthorizationType.IAM,
+        authorizationType: AuthorizationType.NONE,
       },
       deployOptions: {
         tracingEnabled: true,
       },
       policy: new PolicyDocument({
         statements: [
-          // Open up OPTIONS to allow browsers to make unauthenticated preflight requests
           new PolicyStatement({
             effect: Effect.ALLOW,
             principals: [new AnyPrincipal()],
             actions: ['execute-api:Invoke'],
-            resources: ['execute-api:/*/OPTIONS/*'],
+            resources: ['execute-api:/*'],
           }),
         ],
       }),

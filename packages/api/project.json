@@ -137,7 +137,13 @@
           "SERVE_LOCAL": "true"
         }
       },
-      "continuous": true
+      "continuous": true,
+      "dependsOn": [
+        {
+          "projects": ["aws_nx_poc.py_dynamo_db"],
+          "target": "serve-local"
+        }
+      ]
     },
     "sync": {
       "executor": "@nxlv/python:sync",

@@ -1,26 +1,26 @@
-import { Construct, IConstruct } from 'constructs';
+import { IAspect, RemovalPolicy } from 'aws-cdk-lib';
 import {
-  Cors,
-  Resource,
   RestApi as _RestApi,
   RestApiProps as _RestApiProps,
+  Cors,
   IResource,
+  Resource,
   Stage,
 } from 'aws-cdk-lib/aws-apigateway';
-import { IAspect, RemovalPolicy } from 'aws-cdk-lib';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import {
   CfnLoggingConfiguration,
   CfnWebACL,
   CfnWebACLAssociation,
 } from 'aws-cdk-lib/aws-wafv2';
-import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { Construct, IConstruct } from 'constructs';
+import { suppressRules } from '../checkov.js';
 import { RuntimeConfig } from '../runtime-config.js';
 import {
   ApiIntegrations,
   OperationDetails,
   RestApiIntegration,
 } from './utils.js';
-import { suppressRules } from '../checkov.js';
 
 /**
  * Properties for creating a RestApi construct.

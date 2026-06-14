@@ -21,7 +21,8 @@
     "paths": {
       ":aws-nx-poc/common-constructs": [
         "./packages/common/constructs/src/index.ts"
-      ]
+      ],
+      ":aws-nx-poc/infra": ["./packages/infra/src/index.ts"]
     }
   }
 }

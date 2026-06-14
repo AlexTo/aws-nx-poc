@@ -5,6 +5,9 @@
   "references": [
     {
       "path": "./packages/common/constructs"
+    },
+    {
+      "path": "./packages/infra"
     }
   ]
 }

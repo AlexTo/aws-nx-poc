@@ -65,9 +65,7 @@ class JsonStreamingResponse(StreamingResponse):
             "description": description,
             "content": {
                 "application/jsonl": {
-                    "itemSchema": {
-                        "$ref": f"#/components/schemas/{item_model.__name__}"
-                    },
+                    "itemSchema": {"$ref": f"#/components/schemas/{item_model.__name__}"},
                 }
             },
             # Include the model so FastAPI registers the schema in components/schemas
@@ -84,11 +82,7 @@ async def cors_middleware(request: Request, call_next):
     response = await call_next(request)
 
     origin = request.headers.get("origin")
-    allowed_origins = (
-        os.environ.get("ALLOWED_ORIGINS", "").split(",")
-        if os.environ.get("ALLOWED_ORIGINS")
-        else []
-    )
+    allowed_origins = os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ.get("ALLOWED_ORIGINS") else []
 
     is_localhost = origin and urlparse(origin).hostname in ["localhost", "127.0.0.1"]
     is_allowed_origin = origin and origin in allowed_origins
@@ -145,7 +139,7 @@ async def add_correlation_id(request: Request, call_next):
             try:
                 lambda_context = json.loads(lambda_context_header)
                 corr_id = lambda_context.get("request_id")
-            except (json.JSONDecodeError, KeyError):
+            except json.JSONDecodeError, KeyError:
                 pass
     if not corr_id:
         # If still empty, use uuid
