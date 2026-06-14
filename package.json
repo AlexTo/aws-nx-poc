@@ -13,19 +13,29 @@
   },
   "private": true,
   "dependencies": {
-    "@aws/nx-plugin": "1.0.0-rc.6"
+    "@aws/nx-plugin": "1.0.0-rc.6",
+    "aws-cdk-lib": "2.258.0",
+    "constructs": "10.6.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
     "@nx/js": "22.7.5",
+    "@nx/vitest": "22.7.5",
     "@nx/workspace": "22.7.5",
+    "@nxlv/python": "22.2.0",
     "@swc-node/register": "~1.11.1",
     "@swc/core": "~1.15.5",
     "@swc/helpers": "~0.5.18",
+    "@types/node": "25.9.2",
+    "@vitest/coverage-v8": "4.1.8",
     "husky": "9.1.7",
+    "jsdom": "^27.1.0",
+    "ncp": "2.0.0",
     "nx": "22.7.5",
     "tslib": "^2.3.0",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vite": "8.0.16",
+    "vitest": "4.1.8"
   },
   "type": "module"
 }
