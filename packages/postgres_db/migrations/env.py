@@ -1,0 +1,82 @@
+import json
+import os
+from logging.config import fileConfig
+
+from alembic import context
+
+# Import all models to register them in SQLModel.metadata
+from aws_nx_poc_postgres_db.models import *  # noqa: F401, F403
+from sqlalchemy import URL, engine_from_config, pool
+from sqlmodel import SQLModel
+
+config = context.config
+
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+target_metadata = SQLModel.metadata
+
+
+def _get_local_url():
+    if os.environ.get("LOCAL_DEV") == "true":
+        config_path = os.path.join(os.path.dirname(__file__), "..", "config.json")
+        with open(config_path) as f:
+            cfg = json.load(f)["localDev"]
+        engine = cfg["dbEngine"]
+        driver = "mysql+pymysql" if engine == "mysql" else "postgresql+psycopg"
+        return URL.create(
+            driver,
+            username=cfg["dbUser"],
+            password=cfg["dbPassword"],
+            host=cfg["host"],
+            port=cfg["port"],
+            database=cfg["dbName"],
+        )
+
+    raise RuntimeError("Run alembic via nx run <project>:alembic")
+
+
+# Generates SQL script without a live DB connection (alembic upgrade head --sql)
+def run_migrations_offline() -> None:
+    context.configure(
+        url=_get_local_url(),
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+    )
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+# Runs migrations against a live DB connection
+def run_migrations_online() -> None:
+    supplied_connection = config.attributes.get("connection")
+    # Connection injected by migration_handler.py (Lambda)
+    if supplied_connection is not None:
+        context.configure(
+            connection=supplied_connection,
+            target_metadata=target_metadata,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+        return
+
+    # Local alembic commands run via nx run <project>:alembic
+    connectable = engine_from_config(
+        {"sqlalchemy.url": _get_local_url()},
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()

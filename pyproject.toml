@@ -1,0 +1,50 @@
+[project]
+name = "nx-workspace"
+version = "1.0.0"
+dependencies = [
+  "aws-nx-poc-agent-connection",
+  "aws-nx-poc-api1",
+  "aws-nx-poc-api2",
+  "aws-nx-poc-my-sql-db",
+  "aws-nx-poc-postgres-db",
+  "aws-nx-poc-py-project"
+]
+
+[tool.uv.workspace]
+members = [
+  "packages/api1",
+  "packages/api2",
+  "packages/common/agent_connection",
+  "packages/my_sql_db",
+  "packages/postgres_db",
+  "packages/py_project"
+]
+
+[tool.uv.sources.aws-nx-poc-agent-connection]
+workspace = true
+
+[tool.uv.sources.aws-nx-poc-api1]
+workspace = true
+
+[tool.uv.sources.aws-nx-poc-api2]
+workspace = true
+
+[tool.uv.sources.aws-nx-poc-my-sql-db]
+workspace = true
+
+[tool.uv.sources.aws-nx-poc-postgres-db]
+workspace = true
+
+[tool.uv.sources.aws-nx-poc-py-project]
+workspace = true
+
+[dependency-groups]
+dev = [
+  "ruff>=0.8.2",
+  "autopep8>=2.3.1",
+  "pytest>=8.3.4",
+  "pytest-sugar>=1.0.0",
+  "pytest-cov>=6.0.0",
+  "pytest-html>=4.1.1",
+  "ty==0.0.55"
+]

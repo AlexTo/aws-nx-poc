@@ -1,0 +1,86 @@
+{
+  "name": "@aws-nx-poc/common-constructs",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/common/constructs/src",
+  "projectType": "library",
+  "tags": [],
+  "metadata": {
+    "generator": "ts#project"
+  },
+  "targets": {
+    "build": {
+      "dependsOn": [
+        "lint",
+        "compile",
+        "test",
+        "aws_nx_poc.postgres_db:build",
+        "aws_nx_poc.my_sql_db:build",
+        "aws_nx_poc.api1:build",
+        "aws_nx_poc.api2:build",
+        "aws_nx_poc.py_project:build",
+        "@aws-nx-poc/website:build"
+      ]
+    },
+    "compile": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["generate:api1-metadata", "generate:api2-metadata"],
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/tsc"],
+      "options": {
+        "command": "tsc --build tsconfig.lib.json",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["biome"],
+      "options": {
+        "command": "biome lint {projectRoot}"
+      },
+      "configurations": {
+        "fix": {
+          "command": "biome check --write {projectRoot}"
+        },
+        "skip-lint": {
+          "command": "node -e \"\""
+        }
+      }
+    },
+    "generate:api1-metadata": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "inputs": [
+        {
+          "dependentTasksOutputFiles": "**/*.json"
+        }
+      ],
+      "outputs": [
+        "{workspaceRoot}/packages/common/constructs/src/generated/api1"
+      ],
+      "options": {
+        "commands": [
+          "nx g @aws/nx-plugin:open-api#ts-metadata --openApiSpecPath=\"dist/packages/api1/openapi/openapi.json\" --outputPath=\"packages/common/constructs/src/generated/api1\" --no-interactive"
+        ]
+      },
+      "dependsOn": ["aws_nx_poc.api1:openapi"]
+    },
+    "generate:api2-metadata": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "inputs": [
+        {
+          "dependentTasksOutputFiles": "**/*.json"
+        }
+      ],
+      "outputs": [
+        "{workspaceRoot}/packages/common/constructs/src/generated/api2"
+      ],
+      "options": {
+        "commands": [
+          "nx g @aws/nx-plugin:open-api#ts-metadata --openApiSpecPath=\"dist/packages/api2/openapi/openapi.json\" --outputPath=\"packages/common/constructs/src/generated/api2\" --no-interactive"
+        ]
+      },
+      "dependsOn": ["aws_nx_poc.api2:openapi"]
+    }
+  }
+}

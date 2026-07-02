@@ -1,0 +1,14 @@
+{
+  "runtimeConfigKey": "PostgresDb",
+  "localDev": {
+    "containerEngine": "docker",
+    "containerName": "aws-nx-poc-postgres_db",
+    "image": "public.ecr.aws/docker/library/postgres:17.7",
+    "port": 5432,
+    "host": "localhost",
+    "dbName": "postgres_db",
+    "dbUser": "dbadmin",
+    "dbPassword": "password",
+    "dbEngine": "postgres"
+  }
+}

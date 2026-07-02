@@ -1,0 +1,41 @@
+import os
+import ssl
+
+import boto3
+from alembic import command
+from alembic.config import Config
+from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
+
+from .utils import build_database_url, with_connection_retry
+
+
+def _run_migrations() -> None:
+    hostname = os.environ["HOSTNAME"]
+    port = int(os.environ["PORT"])
+    database = os.environ["DATABASE"]
+    db_user = os.environ["DBUSER"]
+    token = boto3.client(
+        "rds", region_name=os.environ["AWS_REGION"]
+    ).generate_db_auth_token(
+        DBHostname=hostname,
+        Port=port,
+        DBUsername=db_user,
+    )
+    database_url = build_database_url(db_user, hostname, port, database, password=token)
+    alembic_cfg = Config("alembic.ini")
+    connect_args = {
+        "auth_plugin_map": {"mysql_clear_password": None},
+        "ssl": ssl.create_default_context(),
+    }
+    engine = create_engine(database_url, poolclass=NullPool, connect_args=connect_args)
+    try:
+        with engine.connect() as connection:
+            alembic_cfg.attributes["connection"] = connection
+            command.upgrade(alembic_cfg, "head")
+    finally:
+        engine.dispose()
+
+
+def handler(_event, _context):
+    with_connection_retry(_run_migrations)

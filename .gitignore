@@ -37,3 +37,7 @@ Thumbs.db
 .claude/worktrees
 .claude/settings.local.json
 .grit
+/reports
+vitest.config.*.timestamp*
+runtime-config.json
+vite.config.*.timestamp*

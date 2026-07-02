@@ -1,0 +1,14 @@
+{
+  "runtimeConfigKey": "MySqlDb",
+  "localDev": {
+    "containerEngine": "docker",
+    "containerName": "aws-nx-poc-my_sql_db",
+    "image": "public.ecr.aws/docker/library/mysql:8.0.44",
+    "port": 3306,
+    "host": "localhost",
+    "dbName": "my_sql_db",
+    "dbUser": "root",
+    "dbPassword": "password",
+    "dbEngine": "mysql"
+  }
+}

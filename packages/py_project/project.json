@@ -1,0 +1,299 @@
+{
+  "name": "aws_nx_poc.py_project",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "packages/py_project/aws_nx_poc_py_project",
+  "release": {
+    "version": {
+      "versionActions": "@nxlv/python/release/version-actions"
+    }
+  },
+  "tags": [],
+  "metadata": {
+    "generator": "py#project",
+    "ports": [8002, 8082],
+    "components": [
+      {
+        "generator": "py#mcp-server",
+        "path": "aws_nx_poc_py_project/mcp_server",
+        "name": "mcp-server",
+        "port": 8002,
+        "rc": "PyProjectMcpServer",
+        "auth": "iam"
+      },
+      {
+        "generator": "py#agent",
+        "path": "aws_nx_poc_py_project/my_agent",
+        "name": "my-agent",
+        "port": 8082,
+        "rc": "MyAgent",
+        "auth": "iam",
+        "protocol": "ag-ui",
+        "framework": "strands"
+      }
+    ]
+  },
+  "targets": {
+    "add": {
+      "executor": "@nxlv/python:add",
+      "options": {}
+    },
+    "build": {
+      "dependsOn": ["lint", "compile", "test", "typecheck", "bundle", "docker"],
+      "inputs": ["default", "^production"],
+      "options": {
+        "outputPath": "{workspaceRoot}/dist/{projectRoot}"
+      }
+    },
+    "bundle": {
+      "dependsOn": ["bundle-arm"]
+    },
+    "bundle-arm": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["compile"],
+      "cache": true,
+      "inputs": ["default", "^production"],
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/bundle-arm"],
+      "options": {
+        "commands": [
+          "uv export --frozen --no-dev --no-editable --project {projectRoot} --package aws_nx_poc.py_project -o dist/{projectRoot}/bundle-arm/requirements.txt",
+          "uv pip install -n --no-deps --no-installer-metadata --no-compile-bytecode --python-platform aarch64-manylinux_2_28 --target dist/{projectRoot}/bundle-arm -r dist/{projectRoot}/bundle-arm/requirements.txt"
+        ],
+        "parallel": false
+      }
+    },
+    "compile": {
+      "executor": "@nxlv/python:build",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/build"],
+      "cache": true,
+      "inputs": ["default", "^production"],
+      "options": {
+        "outputPath": "{workspaceRoot}/dist/{projectRoot}/build",
+        "publish": false,
+        "lockedVersions": true,
+        "bundleLocalDependencies": true,
+        "ignorePaths": [
+          ".venv",
+          ".tox",
+          "tests",
+          "__pycache__",
+          ".coverage",
+          ".coverage.*",
+          ".pytest_cache",
+          "pytest-cache-files-*",
+          ".ruff_cache"
+        ]
+      }
+    },
+    "dev": {
+      "dependsOn": ["mcp-server-dev", "my-agent-dev"],
+      "continuous": true
+    },
+    "docker": {
+      "dependsOn": ["mcp-server-docker", "my-agent-docker"]
+    },
+    "format": {
+      "executor": "@nxlv/python:ruff-format",
+      "outputs": [],
+      "cache": true,
+      "options": {
+        "filePatterns": ["aws_nx_poc_py_project", "tests"]
+      }
+    },
+    "install": {
+      "executor": "@nxlv/python:install",
+      "options": {
+        "silent": false,
+        "args": "",
+        "verbose": false,
+        "debug": false
+      }
+    },
+    "lint": {
+      "executor": "@nxlv/python:ruff-check",
+      "dependsOn": ["format"],
+      "cache": true,
+      "inputs": ["default", "^production"],
+      "outputs": [],
+      "options": {
+        "lintFilePatterns": ["aws_nx_poc_py_project", "tests"]
+      },
+      "configurations": {
+        "fix": {
+          "fix": true
+        },
+        "skip-lint": {
+          "exitZero": true
+        }
+      }
+    },
+    "lock": {
+      "executor": "@nxlv/python:lock",
+      "options": {
+        "update": false
+      }
+    },
+    "mcp-server-dev": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        {
+          "projects": ["aws_nx_poc.my_sql_db"],
+          "target": "dev"
+        }
+      ],
+      "continuous": true,
+      "options": {
+        "commands": [
+          "uv run uvicorn --reload aws_nx_poc_py_project.mcp_server.http:app --host 0.0.0.0 --port 8002"
+        ],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "8002",
+          "LOCAL_DEV": "true"
+        }
+      }
+    },
+    "mcp-server-docker": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "dependsOn": ["bundle-arm"],
+      "options": {
+        "commands": [
+          "rimraf dist/packages/py_project/docker/py-project-mcp-server",
+          "make-dir dist/packages/py_project/docker/py-project-mcp-server",
+          "ncp dist/packages/py_project/bundle-arm dist/packages/py_project/docker/py-project-mcp-server",
+          "ncp packages/py_project/aws_nx_poc_py_project/mcp_server/Dockerfile dist/packages/py_project/docker/py-project-mcp-server/Dockerfile",
+          "docker build --platform linux/arm64 -t aws-nx-poc-py-project-mcp-server:latest dist/packages/py_project/docker/py-project-mcp-server"
+        ],
+        "parallel": false
+      }
+    },
+    "mcp-server-inspect": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "dependsOn": ["mcp-server-dev"],
+      "options": {
+        "commands": [
+          "mcp-inspector --transport http --server-url http://localhost:8002/mcp"
+        ],
+        "cwd": "{projectRoot}"
+      }
+    },
+    "mcp-server-inspect-stdio": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "commands": [
+          "mcp-inspector -- uv run -m aws_nx_poc_py_project.mcp_server.stdio"
+        ],
+        "cwd": "{projectRoot}"
+      }
+    },
+    "mcp-server-serve": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "commands": [
+          "uv run uvicorn --reload aws_nx_poc_py_project.mcp_server.http:app --host 0.0.0.0 --port 8002"
+        ],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "8002"
+        }
+      }
+    },
+    "mcp-server-serve-stdio": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "commands": ["uv run -m aws_nx_poc_py_project.mcp_server.stdio"],
+        "cwd": "{projectRoot}"
+      }
+    },
+    "my-agent-chat": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["tsx ./scripts/my-agent/chat.ts"],
+        "cwd": "{projectRoot}",
+        "env": {
+          "URL": "http://localhost:8082/invocations"
+        }
+      }
+    },
+    "my-agent-dev": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "commands": [
+          "uv run fastapi dev aws_nx_poc_py_project/my_agent/main.py --port 8082"
+        ],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "8082",
+          "LOCAL_DEV": "true"
+        }
+      }
+    },
+    "my-agent-docker": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "dependsOn": ["bundle-arm"],
+      "options": {
+        "commands": [
+          "rimraf dist/packages/py_project/docker/my-agent",
+          "make-dir dist/packages/py_project/docker/my-agent",
+          "ncp dist/packages/py_project/bundle-arm dist/packages/py_project/docker/my-agent",
+          "ncp packages/py_project/aws_nx_poc_py_project/my_agent/Dockerfile dist/packages/py_project/docker/my-agent/Dockerfile",
+          "docker build --platform linux/arm64 -t aws-nx-poc-my-agent:latest dist/packages/py_project/docker/my-agent"
+        ],
+        "parallel": false
+      }
+    },
+    "my-agent-serve": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "commands": [
+          "uv run fastapi dev aws_nx_poc_py_project/my_agent/main.py --port 8082"
+        ],
+        "cwd": "{projectRoot}",
+        "env": {
+          "PORT": "8082"
+        }
+      }
+    },
+    "remove": {
+      "executor": "@nxlv/python:remove",
+      "options": {}
+    },
+    "sync": {
+      "executor": "@nxlv/python:sync",
+      "options": {}
+    },
+    "test": {
+      "executor": "@nxlv/python:run-commands",
+      "outputs": [
+        "{workspaceRoot}/reports/{projectRoot}/unittests",
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
+      "cache": true,
+      "options": {
+        "command": "uv run pytest tests/",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "typecheck": {
+      "cache": true,
+      "inputs": ["default", "^production"],
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run ty check",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "update": {
+      "executor": "@nxlv/python:update",
+      "options": {}
+    }
+  }
+}

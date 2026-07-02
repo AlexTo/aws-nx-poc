@@ -1,10 +1,12 @@
 packages:
   - packages/*
+  - packages/common/*
 allowBuilds:
   '@swc/core': true
   esbuild: true
   nx: true
   sharp: true
+  '@scarf/scarf': false
 onlyBuiltDependencies:
   - '@swc/core'
   - esbuild
@@ -12,3 +14,4 @@ onlyBuiltDependencies:
   - sharp
 overrides:
   '@aws/nx-plugin': link:../nx-plugin-for-aws/dist/packages/nx-plugin
+ignoreWorkspaceRootCheck: true

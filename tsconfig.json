@@ -2,5 +2,21 @@
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],
-  "references": []
+  "references": [
+    {
+      "path": "./packages/common/scripts"
+    },
+    {
+      "path": "./packages/common/constructs"
+    },
+    {
+      "path": "./packages/website"
+    },
+    {
+      "path": "./packages/common/shadcn"
+    },
+    {
+      "path": "./packages/infra"
+    }
+  ]
 }

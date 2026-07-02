@@ -14,13 +14,23 @@ pnpm exec nx generate @aws/nx-plugin:py#project --name=PyProject --type=applicat
 
 pnpm exec nx generate @aws/nx-plugin:py#mcp-server --project=aws_nx_poc.py_project --no-interactive
 
-pnpm exec nx generate @aws/nx-plugin:py#agent --project=aws_nx_poc.py_project --no-interactive
+pnpm exec nx generate @aws/nx-plugin:py#agent --project=aws_nx_poc.py_project --protocol=ag-ui --name=my_agent --no-interactive
+
+pnpm exec nx generate @aws/nx-plugin:connection --sourceProject=aws_nx_poc.py_project --targetProject=aws_nx_poc.my_sql_db --sourceComponent=mcp-server --no-interactive
+
+pnpm exec nx generate @aws/nx-plugin:connection --sourceProject=aws_nx_poc.py_project --targetProject=aws_nx_poc.postgres_db --sourceComponent=agent --no-interactive
+
+pnpm exec nx generate @aws/nx-plugin:connection --sourceProject=aws_nx_poc.py_project --targetProject=aws_nx_poc.py_project --sourceComponent=agent --targetComponent=mcp-server --no-interactive
 
 pnpm exec nx generate @aws/nx-plugin:ts#website --name=website --no-interactive
 
 pnpm exec nx generate @aws/nx-plugin:connection --sourceProject=@aws-nx-poc/website --targetProject=aws_nx_poc.api1 --no-interactive
 
 pnpm exec nx generate @aws/nx-plugin:connection --sourceProject=@aws-nx-poc/website --targetProject=aws_nx_poc.api2 --no-interactive
+
+pnpm exec nx generate @aws/nx-plugin:connection --sourceProject=@aws-nx-poc/website --targetProject=aws_nx_poc.py_project --targetComponent=my-agent --no-interactive
+
+pnpm exec nx generate @aws/nx-plugin:ts#website#auth --project=@aws-nx-poc/website --cognitoDomain=pyrdb --no-interactive 
 
 pnpm exec nx generate @aws/nx-plugin:ts#infra --name=infra --no-interactive
 

@@ -1,0 +1,141 @@
+{
+  "name": "@aws-nx-poc/website",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/website/src",
+  "projectType": "application",
+  "tags": [],
+  "metadata": {
+    "generator": "ts#react-website",
+    "ux": "shadcn",
+    "framework": "react",
+    "infra": "cloudfront-s3",
+    "components": [
+      {
+        "generator": "ts#react-website#runtime-config",
+        "path": "src/components/RuntimeConfig"
+      },
+      {
+        "generator": "ts#react-website#auth",
+        "path": "src/components/CognitoAuth"
+      }
+    ]
+  },
+  "targets": {
+    "build": {
+      "dependsOn": ["lint", "compile", "test", "bundle"]
+    },
+    "bundle": {
+      "dependsOn": ["generate:api1-client", "generate:api2-client"]
+    },
+    "compile": {
+      "dependsOn": ["^build", "generate:api1-client", "generate:api2-client"],
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/tsc"],
+      "options": {
+        "command": "tsc --build tsconfig.app.json",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        {
+          "projects": ["aws_nx_poc.api1"],
+          "target": "dev"
+        },
+        "generate:api1-client",
+        "watch-generate:api1-client",
+        {
+          "projects": ["aws_nx_poc.api2"],
+          "target": "dev"
+        },
+        "generate:api2-client",
+        "watch-generate:api2-client",
+        {
+          "projects": ["aws_nx_poc.py_project"],
+          "target": "my-agent-dev"
+        }
+      ],
+      "continuous": true,
+      "options": {
+        "command": "vite --mode local-dev",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "generate:api1-client": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "inputs": [
+        {
+          "dependentTasksOutputFiles": "**/*.json"
+        }
+      ],
+      "outputs": ["{workspaceRoot}/packages/website/src/generated/api1"],
+      "dependsOn": ["aws_nx_poc.api1:openapi"],
+      "options": {
+        "commands": [
+          "nx g @aws/nx-plugin:open-api#ts-hooks --openApiSpecPath=\"dist/packages/api1/openapi/openapi.json\" --outputPath=\"packages/website/src/generated/api1\" --no-interactive"
+        ]
+      }
+    },
+    "generate:api2-client": {
+      "cache": true,
+      "executor": "nx:run-commands",
+      "inputs": [
+        {
+          "dependentTasksOutputFiles": "**/*.json"
+        }
+      ],
+      "outputs": ["{workspaceRoot}/packages/website/src/generated/api2"],
+      "dependsOn": ["aws_nx_poc.api2:openapi"],
+      "options": {
+        "commands": [
+          "nx g @aws/nx-plugin:open-api#ts-hooks --openApiSpecPath=\"dist/packages/api2/openapi/openapi.json\" --outputPath=\"packages/website/src/generated/api2\" --no-interactive"
+        ]
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["biome"],
+      "options": {
+        "command": "biome lint {projectRoot}"
+      },
+      "configurations": {
+        "fix": {
+          "command": "biome check --write {projectRoot}"
+        },
+        "skip-lint": {
+          "command": "node -e \"\""
+        }
+      }
+    },
+    "load:runtime-config": {
+      "executor": "nx:run-commands",
+      "metadata": {
+        "description": "Load runtime config from your deployed stack for dev purposes. You must set your AWS CLI credentials whilst calling 'pnpm nx run @aws-nx-poc/website:load:runtime-config'"
+      },
+      "options": {
+        "command": "aws s3 cp s3://`aws cloudformation describe-stacks --query \"Stacks[?starts_with(StackName, 'aws-nx-poc-')][].Outputs[] | [?contains(OutputKey, 'WebsiteWebsiteBucketName')].OutputValue\" --output text`/runtime-config.json \"{projectRoot}/public/runtime-config.json\""
+      }
+    },
+    "watch-generate:api1-client": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "commands": [
+          "nx watch --projects=aws_nx_poc.api1 --includeDependencies -- nx run @aws-nx-poc/website:\"generate:api1-client\""
+        ]
+      }
+    },
+    "watch-generate:api2-client": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "commands": [
+          "nx watch --projects=aws_nx_poc.api2 --includeDependencies -- nx run @aws-nx-poc/website:\"generate:api2-client\""
+        ]
+      }
+    }
+  }
+}

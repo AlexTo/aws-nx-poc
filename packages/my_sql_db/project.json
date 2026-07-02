@@ -1,0 +1,230 @@
+{
+  "name": "aws_nx_poc.my_sql_db",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/my_sql_db/aws_nx_poc_my_sql_db",
+  "release": {
+    "version": {
+      "versionActions": "@nxlv/python/release/version-actions"
+    }
+  },
+  "tags": [],
+  "metadata": {
+    "generator": "py#rdb",
+    "ports": [3306],
+    "engine": "mysql"
+  },
+  "targets": {
+    "add": {
+      "executor": "@nxlv/python:add",
+      "options": {}
+    },
+    "build": {
+      "dependsOn": [
+        "lint",
+        "compile",
+        "test",
+        "typecheck",
+        "bundle",
+        "bundle-migration",
+        "bundle-create-db-user"
+      ],
+      "inputs": ["default", "^production"],
+      "options": {
+        "outputPath": "{workspaceRoot}/dist/{projectRoot}"
+      }
+    },
+    "compile": {
+      "executor": "@nxlv/python:build",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/build"],
+      "cache": true,
+      "inputs": ["default", "^production"],
+      "options": {
+        "outputPath": "{workspaceRoot}/dist/{projectRoot}/build",
+        "publish": false,
+        "lockedVersions": true,
+        "bundleLocalDependencies": true,
+        "ignorePaths": [
+          ".venv",
+          ".tox",
+          "tests",
+          "__pycache__",
+          ".coverage",
+          ".coverage.*",
+          ".pytest_cache",
+          "pytest-cache-files-*",
+          ".ruff_cache"
+        ]
+      }
+    },
+    "format": {
+      "executor": "@nxlv/python:ruff-format",
+      "outputs": [],
+      "cache": true,
+      "options": {
+        "filePatterns": ["aws_nx_poc_my_sql_db", "tests"]
+      }
+    },
+    "install": {
+      "executor": "@nxlv/python:install",
+      "options": {
+        "silent": false,
+        "args": "",
+        "verbose": false,
+        "debug": false
+      }
+    },
+    "lint": {
+      "executor": "@nxlv/python:ruff-check",
+      "dependsOn": ["format"],
+      "cache": true,
+      "inputs": ["default", "^production"],
+      "outputs": [],
+      "options": {
+        "lintFilePatterns": ["aws_nx_poc_my_sql_db", "tests"]
+      },
+      "configurations": {
+        "fix": {
+          "fix": true
+        },
+        "skip-lint": {
+          "exitZero": true
+        }
+      }
+    },
+    "lock": {
+      "executor": "@nxlv/python:lock",
+      "options": {
+        "update": false
+      }
+    },
+    "remove": {
+      "executor": "@nxlv/python:remove",
+      "options": {}
+    },
+    "sync": {
+      "executor": "@nxlv/python:sync",
+      "options": {}
+    },
+    "test": {
+      "executor": "@nxlv/python:run-commands",
+      "outputs": [
+        "{workspaceRoot}/reports/{projectRoot}/unittests",
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
+      "cache": true,
+      "options": {
+        "command": "uv run pytest tests/",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "typecheck": {
+      "cache": true,
+      "inputs": ["default", "^production"],
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "uv run ty check",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "update": {
+      "executor": "@nxlv/python:update",
+      "options": {}
+    },
+    "bundle-arm": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["compile"],
+      "cache": true,
+      "inputs": ["default", "^production"],
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/bundle-arm"],
+      "options": {
+        "commands": [
+          "uv export --frozen --no-dev --no-editable --project {projectRoot} --package aws_nx_poc.my_sql_db -o dist/{projectRoot}/bundle-arm/requirements.txt",
+          "uv pip install -n --no-deps --no-installer-metadata --no-compile-bytecode --python-platform aarch64-manylinux_2_28 --target dist/{projectRoot}/bundle-arm -r dist/{projectRoot}/bundle-arm/requirements.txt"
+        ],
+        "parallel": false
+      }
+    },
+    "bundle": {
+      "dependsOn": ["bundle-arm", "bundle-migration", "bundle-create-db-user"]
+    },
+    "bundle-migration": {
+      "cache": true,
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/docker/migration"],
+      "executor": "nx:run-commands",
+      "dependsOn": ["bundle-arm"],
+      "options": {
+        "commands": [
+          "rimraf dist/packages/my_sql_db/docker/migration",
+          "make-dir dist/packages/my_sql_db/docker/migration",
+          "ncp dist/packages/my_sql_db/bundle-arm dist/packages/my_sql_db/docker/migration",
+          "ncp packages/my_sql_db/migrations dist/packages/my_sql_db/docker/migration/migrations",
+          "ncp packages/my_sql_db/alembic.ini dist/packages/my_sql_db/docker/migration/alembic.ini",
+          "ncp packages/my_sql_db/Dockerfile.migration dist/packages/my_sql_db/docker/migration/Dockerfile"
+        ],
+        "parallel": false
+      }
+    },
+    "bundle-create-db-user": {
+      "cache": true,
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}/docker/create-db-user"],
+      "executor": "nx:run-commands",
+      "dependsOn": ["bundle-arm"],
+      "options": {
+        "commands": [
+          "rimraf dist/packages/my_sql_db/docker/create-db-user",
+          "make-dir dist/packages/my_sql_db/docker/create-db-user",
+          "ncp dist/packages/my_sql_db/bundle-arm dist/packages/my_sql_db/docker/create-db-user",
+          "ncp packages/my_sql_db/Dockerfile.create-db-user dist/packages/my_sql_db/docker/create-db-user/Dockerfile"
+        ],
+        "parallel": false
+      }
+    },
+    "pull-image": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx ../common/scripts/src/rdb/pull-image.ts",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "dependsOn": ["pull-image"],
+      "options": {
+        "command": "tsx ../common/scripts/src/rdb/start-container.ts",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "wait-for-db": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["dev"],
+      "options": {
+        "command": "tsx ../common/scripts/src/rdb/wait-for-mysql-db.ts",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "migrate": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["dev", "wait-for-db"],
+      "options": {
+        "command": "uv run alembic upgrade head",
+        "cwd": "{projectRoot}",
+        "env": {
+          "LOCAL_DEV": "true"
+        }
+      }
+    },
+    "alembic": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["dev", "wait-for-db"],
+      "options": {
+        "command": "uv run alembic",
+        "cwd": "{projectRoot}",
+        "env": {
+          "LOCAL_DEV": "true"
+        }
+      }
+    }
+  }
+}

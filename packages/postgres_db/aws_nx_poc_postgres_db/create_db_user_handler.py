@@ -1,0 +1,76 @@
+import secrets
+from typing import Any
+
+import psycopg
+from psycopg import sql as pgsql
+
+from .utils import get_database_secret, with_connection_retry
+
+
+def _ensure_database_user(db_user: str) -> None:
+    secret = get_database_secret()
+    connection = psycopg.connect(
+        host=secret["host"],
+        port=secret["port"],
+        dbname=secret["dbname"],
+        user=secret["username"],
+        password=secret["password"],
+        sslmode="verify-full",
+        connect_timeout=10,
+    )
+    try:
+        connection.autocommit = False
+        with connection.cursor() as cursor:
+            db_user_ident = pgsql.Identifier(db_user)
+            db_name_ident = pgsql.Identifier(secret["dbname"])
+            cursor.execute(
+                pgsql.SQL("SELECT 1 FROM pg_roles WHERE rolname = %s"),
+                (db_user,),
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    pgsql.SQL("CREATE ROLE {} WITH LOGIN").format(db_user_ident)
+                )
+            cursor.execute(
+                pgsql.SQL(
+                    "ALTER ROLE {role} WITH LOGIN;"
+                    "GRANT ALL PRIVILEGES ON DATABASE {db} TO {role};"
+                    "GRANT USAGE, CREATE ON SCHEMA public TO {role};"
+                    "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {role};"
+                    "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {role};"
+                    "GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO {role};"
+                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {role};"
+                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO {role};"
+                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO {role};"
+                    "GRANT rds_iam TO {role};"
+                ).format(role=db_user_ident, db=db_name_ident)
+            )
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+_PHYSICAL_RESOURCE_ID_PREFIX = "db-user:"
+
+
+def _resolve_db_user(physical_resource_id: str | None) -> str:
+    if physical_resource_id and physical_resource_id.startswith(
+        _PHYSICAL_RESOURCE_ID_PREFIX
+    ):
+        return physical_resource_id[len(_PHYSICAL_RESOURCE_ID_PREFIX) :]
+    return f"db_{secrets.token_hex(8)}"
+
+
+def handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
+    db_user = _resolve_db_user(event.get("PhysicalResourceId"))
+
+    if event.get("RequestType") != "Delete":
+        with_connection_retry(lambda: _ensure_database_user(db_user))
+
+    return {
+        "PhysicalResourceId": f"{_PHYSICAL_RESOURCE_ID_PREFIX}{db_user}",
+        "Data": {"dbUser": db_user},
+    }
