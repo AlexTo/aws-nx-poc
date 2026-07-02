@@ -2,9 +2,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-_session_id_var: ContextVar[str | None] = ContextVar(
-    "agentcore_session_id", default=None
-)
+_session_id_var: ContextVar[str | None] = ContextVar("agentcore_session_id", default=None)
 
 
 def get_current_session_id() -> str | None:

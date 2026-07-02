@@ -14,9 +14,7 @@ def _run_migrations() -> None:
     port = int(os.environ["PORT"])
     database = os.environ["DATABASE"]
     db_user = os.environ["DBUSER"]
-    token = boto3.client(
-        "rds", region_name=os.environ["AWS_REGION"]
-    ).generate_db_auth_token(
+    token = boto3.client("rds", region_name=os.environ["AWS_REGION"]).generate_db_auth_token(
         DBHostname=hostname,
         Port=port,
         DBUsername=db_user,

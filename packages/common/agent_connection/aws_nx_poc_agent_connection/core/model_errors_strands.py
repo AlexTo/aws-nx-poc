@@ -17,10 +17,7 @@ _ACCESS_DENIED = (
 
 
 def _is_access_denied(error: BaseException) -> bool:
-    return (
-        isinstance(error, ClientError)
-        and error.response.get("Error", {}).get("Code") == "AccessDeniedException"
-    )
+    return isinstance(error, ClientError) and error.response.get("Error", {}).get("Code") == "AccessDeniedException"
 
 
 class _LogModelErrors:

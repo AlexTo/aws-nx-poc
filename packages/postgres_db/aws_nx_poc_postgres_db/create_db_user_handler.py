@@ -28,9 +28,7 @@ def _ensure_database_user(db_user: str) -> None:
                 (db_user,),
             )
             if cursor.fetchone() is None:
-                cursor.execute(
-                    pgsql.SQL("CREATE ROLE {} WITH LOGIN").format(db_user_ident)
-                )
+                cursor.execute(pgsql.SQL("CREATE ROLE {} WITH LOGIN").format(db_user_ident))
             cursor.execute(
                 pgsql.SQL(
                     "ALTER ROLE {role} WITH LOGIN;"
@@ -57,9 +55,7 @@ _PHYSICAL_RESOURCE_ID_PREFIX = "db-user:"
 
 
 def _resolve_db_user(physical_resource_id: str | None) -> str:
-    if physical_resource_id and physical_resource_id.startswith(
-        _PHYSICAL_RESOURCE_ID_PREFIX
-    ):
+    if physical_resource_id and physical_resource_id.startswith(_PHYSICAL_RESOURCE_ID_PREFIX):
         return physical_resource_id[len(_PHYSICAL_RESOURCE_ID_PREFIX) :]
     return f"db_{secrets.token_hex(8)}"
 

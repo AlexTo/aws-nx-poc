@@ -57,9 +57,7 @@ def get_database_config(runtime_config_key: str) -> DatabaseConfig:
     if runtime_config_key not in _database_config:
         app_id = os.environ.get("RUNTIME_CONFIG_APP_ID")
         if not app_id:
-            raise ValueError(
-                "Missing required environment variable RUNTIME_CONFIG_APP_ID."
-            )
+            raise ValueError("Missing required environment variable RUNTIME_CONFIG_APP_ID.")
         provider = AppConfigProvider(application=app_id, environment="default")
         config = provider.get("database", transform="json")
         if not isinstance(config, dict):
@@ -101,9 +99,6 @@ def with_connection_retry[T](
             if attempt == max_attempts or not is_transient_connection_error(e):
                 raise
             wait = delay_seconds * attempt
-            print(
-                f"Transient connection error (attempt {attempt}/{max_attempts}), "
-                f"retrying in {wait:.0f}s: {e}"
-            )
+            print(f"Transient connection error (attempt {attempt}/{max_attempts}), retrying in {wait:.0f}s: {e}")
             time.sleep(wait)
     raise RuntimeError("unreachable")

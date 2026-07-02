@@ -64,9 +64,7 @@ class JsonStreamingResponse(StreamingResponse):
             "description": description,
             "content": {
                 "application/jsonl": {
-                    "itemSchema": {
-                        "$ref": f"#/components/schemas/{item_model.__name__}"
-                    },
+                    "itemSchema": {"$ref": f"#/components/schemas/{item_model.__name__}"},
                 }
             },
             # Include the model so FastAPI registers the schema in components/schemas
@@ -85,11 +83,7 @@ app = FastAPI(
 @app.middleware("http")
 async def cors_middleware(request: Request, call_next):
     origin = request.headers.get("origin")
-    allowed_origins = (
-        os.environ.get("ALLOWED_ORIGINS", "").split(",")
-        if os.environ.get("ALLOWED_ORIGINS")
-        else []
-    )
+    allowed_origins = os.environ.get("ALLOWED_ORIGINS", "").split(",") if os.environ.get("ALLOWED_ORIGINS") else []
 
     is_localhost = origin and urlparse(origin).hostname in ["localhost", "127.0.0.1"]
     is_allowed_origin = origin and origin in allowed_origins
@@ -100,11 +94,7 @@ async def cors_middleware(request: Request, call_next):
 
     # Preflight requests have no matching route, so respond directly rather
     # than calling call_next (which would 405 and fail the CORS preflight check)
-    response = (
-        Response(status_code=200)
-        if request.method == "OPTIONS"
-        else await call_next(request)
-    )
+    response = Response(status_code=200) if request.method == "OPTIONS" else await call_next(request)
 
     response.headers["Access-Control-Allow-Origin"] = cors_origin
     response.headers["Access-Control-Allow-Methods"] = "*"
@@ -154,7 +144,7 @@ async def add_correlation_id(request: Request, call_next):
             try:
                 lambda_context = json.loads(lambda_context_header)
                 corr_id = lambda_context.get("request_id")
-            except (json.JSONDecodeError, KeyError):
+            except json.JSONDecodeError, KeyError:
                 pass
     if not corr_id:
         # If still empty, use uuid

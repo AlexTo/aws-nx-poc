@@ -17,9 +17,7 @@ def get_agentcore_runtime_config() -> dict[str, Any]:
     """
     application = os.environ.get("RUNTIME_CONFIG_APP_ID")
     if not application:
-        raise RuntimeError(
-            "RUNTIME_CONFIG_APP_ID is not set — cannot resolve connected agent ARNs from AppConfig."
-        )
+        raise RuntimeError("RUNTIME_CONFIG_APP_ID is not set — cannot resolve connected agent ARNs from AppConfig.")
     region = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION"))
     provider = parameters.AppConfigProvider(
         environment="default",
