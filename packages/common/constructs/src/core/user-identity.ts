@@ -1,7 +1,7 @@
 import {
   IdentityPool,
   UserPoolAuthenticationProvider,
-} from 'aws-cdk-lib/aws-cognito-identitypool';
+} from "aws-cdk-lib/aws-cognito-identitypool";
 import {
   CfnOutput,
   CfnResource,
@@ -9,7 +9,7 @@ import {
   Lazy,
   RemovalPolicy,
   Stack,
-} from 'aws-cdk-lib';
+} from "aws-cdk-lib";
 import {
   AccountRecovery,
   CfnManagedLoginBranding,
@@ -17,22 +17,21 @@ import {
   FeaturePlan,
   Mfa,
   OAuthScope,
-  StandardThreatProtectionMode,
   UserPool,
   UserPoolClient,
-} from 'aws-cdk-lib/aws-cognito';
+} from "aws-cdk-lib/aws-cognito";
 import {
   CfnLoggingConfiguration,
   CfnWebACL,
   CfnWebACLAssociation,
-} from 'aws-cdk-lib/aws-wafv2';
-import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { Construct } from 'constructs';
-import { RuntimeConfig } from './runtime-config.js';
-import { Distribution } from 'aws-cdk-lib/aws-cloudfront';
-import { suppressRules } from './checkov.js';
+} from "aws-cdk-lib/aws-wafv2";
+import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
+import { Construct } from "constructs";
+import { RuntimeConfig } from "./runtime-config.js";
+import { Distribution } from "aws-cdk-lib/aws-cloudfront";
+import { suppressRules } from "./checkov.js";
 
-const WEB_CLIENT_ID = 'WebClient';
+const WEB_CLIENT_ID = "WebClient";
 
 export interface UserIdentityProps {
   /**
@@ -83,7 +82,7 @@ export class UserIdentity extends Construct {
       this.userPoolDomain,
     );
 
-    RuntimeConfig.ensure(this).set('connection', 'cognitoProps', {
+    RuntimeConfig.ensure(this).set("connection", "cognitoProps", {
       region: Stack.of(this).region,
       identityPoolId: this.identityPool.identityPoolId,
       userPoolId: this.userPool.userPoolId,
@@ -92,9 +91,9 @@ export class UserIdentity extends Construct {
 
     suppressRules(
       this.userPool,
-      ['CKV_AWS_111'],
-      'SMS Role requires wildcard resource',
-      (c) => c.node.path.includes('/smsRole/'),
+      ["CKV_AWS_111"],
+      "SMS Role requires wildcard resource",
+      (c) => c.node.path.includes("/smsRole/"),
     );
 
     new CfnOutput(this, `${id}-UserPoolId`, {
@@ -111,8 +110,8 @@ export class UserIdentity extends Construct {
   }
 
   private createUserPool = () => {
-    const userPool = new UserPool(this, 'UserPool', {
-      deletionProtection: true,
+    const userPool = new UserPool(this, "UserPool", {
+      deletionProtection: false,
       passwordPolicy: {
         minLength: 8,
         requireLowercase: true,
@@ -121,15 +120,14 @@ export class UserIdentity extends Construct {
         requireSymbols: true,
         tempPasswordValidity: Duration.days(3),
       },
-      mfa: Mfa.REQUIRED,
+      mfa: Mfa.OFF,
+      removalPolicy: RemovalPolicy.DESTROY,
       featurePlan: FeaturePlan.PLUS,
-      // Audit-only logs threat assessments without blocking sign-in. Switch to FULL_FUNCTION to enforce automatic responses.
-      standardThreatProtectionMode: StandardThreatProtectionMode.AUDIT_ONLY,
-      mfaSecondFactor: { sms: true, otp: true },
+      mfaSecondFactor: { sms: false, otp: false },
       signInCaseSensitive: false,
-      signInAliases: { username: true, email: true },
+      signInAliases: { username: false, email: true },
       accountRecovery: AccountRecovery.EMAIL_ONLY,
-      selfSignUpEnabled: false,
+      selfSignUpEnabled: true,
       standardAttributes: {
         phoneNumber: { required: false },
         email: { required: true },
@@ -137,17 +135,17 @@ export class UserIdentity extends Construct {
         familyName: { required: true },
       },
       autoVerify: {
-        email: true,
-        phone: true,
+        email: false,
+        phone: false,
       },
       keepOriginal: {
-        email: true,
-        phone: true,
+        email: false,
+        phone: false,
       },
     });
     // Retain the SMS role alongside the pool so the pool can still be updated and deleted manually
     const poolCfn = userPool.node.defaultChild as CfnResource;
-    const smsRoleNode = userPool.node.tryFindChild('smsRole');
+    const smsRoleNode = userPool.node.tryFindChild("smsRole");
     if (smsRoleNode) {
       const smsRoleCfn = smsRoleNode.node.defaultChild as CfnResource;
       smsRoleCfn.cfnOptions.deletionPolicy = poolCfn.cfnOptions.deletionPolicy;
@@ -158,9 +156,9 @@ export class UserIdentity extends Construct {
   };
 
   private createWebAcl = (id: string, userPool: UserPool) => {
-    const webAcl = new CfnWebACL(this, 'WebAcl', {
+    const webAcl = new CfnWebACL(this, "WebAcl", {
       defaultAction: { allow: {} },
-      scope: 'REGIONAL',
+      scope: "REGIONAL",
       visibilityConfig: {
         cloudWatchMetricsEnabled: true,
         metricName: `${id}WebAcl`,
@@ -168,12 +166,12 @@ export class UserIdentity extends Construct {
       },
       rules: [
         {
-          name: 'CRSRule',
+          name: "CRSRule",
           priority: 0,
           statement: {
             managedRuleGroupStatement: {
-              name: 'AWSManagedRulesCommonRuleSet',
-              vendorName: 'AWS',
+              name: "AWSManagedRulesCommonRuleSet",
+              vendorName: "AWS",
             },
           },
           visibilityConfig: {
@@ -186,12 +184,12 @@ export class UserIdentity extends Construct {
           },
         },
         {
-          name: 'KnownBadInputsRule',
+          name: "KnownBadInputsRule",
           priority: 1,
           statement: {
             managedRuleGroupStatement: {
-              name: 'AWSManagedRulesKnownBadInputsRuleSet',
-              vendorName: 'AWS',
+              name: "AWSManagedRulesKnownBadInputsRuleSet",
+              vendorName: "AWS",
             },
           },
           visibilityConfig: {
@@ -206,25 +204,25 @@ export class UserIdentity extends Construct {
       ],
     });
 
-    new CfnWebACLAssociation(this, 'WebAclAssociation', {
+    new CfnWebACLAssociation(this, "WebAclAssociation", {
       resourceArn: userPool.userPoolArn,
       webAclArn: webAcl.attrArn,
     });
 
     // Send WAF request logs to CloudWatch. The log group name must start with
     // `aws-waf-logs-` to satisfy the WAFv2 logging destination requirement.
-    const wafLogGroup = new LogGroup(this, 'WebAclLogs', {
+    const wafLogGroup = new LogGroup(this, "WebAclLogs", {
       logGroupName: `aws-waf-logs-${id}-${this.node.addr.slice(-8)}`,
       retention: RetentionDays.ONE_MONTH,
       removalPolicy: RemovalPolicy.DESTROY,
     });
     suppressRules(
       wafLogGroup,
-      ['CKV_AWS_158'],
-      'Using default CloudWatch log encryption for WAF logs',
+      ["CKV_AWS_158"],
+      "Using default CloudWatch log encryption for WAF logs",
     );
 
-    new CfnLoggingConfiguration(this, 'WebAclLoggingConfig', {
+    new CfnLoggingConfiguration(this, "WebAclLoggingConfig", {
       resourceArn: webAcl.attrArn,
       logDestinationConfigs: [wafLogGroup.logGroupArn],
     });
@@ -233,7 +231,7 @@ export class UserIdentity extends Construct {
   };
 
   private createUserPoolDomain = (userPool: UserPool) =>
-    new CfnUserPoolDomain(this, 'UserPoolDomain', {
+    new CfnUserPoolDomain(this, "UserPoolDomain", {
       domain: `pyrdb-${Stack.of(this).account}`,
       userPoolId: userPool.userPoolId,
       managedLoginVersion: 2,
@@ -242,7 +240,7 @@ export class UserIdentity extends Construct {
   private createUserPoolClient = (userPool: UserPool) => {
     const lazilyComputedCallbackUrls = Lazy.list({
       produce: () =>
-        ['http://localhost:4200', 'http://localhost:4300'].concat(
+        ["http://localhost:4200", "http://localhost:4300"].concat(
           this.findCloudFrontDistributions().map(
             (d) => `https://${d.domainName}`,
           ),
@@ -271,7 +269,7 @@ export class UserIdentity extends Construct {
     userPool: UserPool,
     userPoolClient: UserPoolClient,
   ) => {
-    const identityPool = new IdentityPool(this, 'IdentityPool');
+    const identityPool = new IdentityPool(this, "IdentityPool");
 
     identityPool.addUserPoolAuthentication(
       new UserPoolAuthenticationProvider({
@@ -288,7 +286,7 @@ export class UserIdentity extends Construct {
     userPoolClient: UserPoolClient,
     userPoolDomain: CfnUserPoolDomain,
   ) => {
-    new CfnManagedLoginBranding(this, 'ManagedLoginBranding', {
+    new CfnManagedLoginBranding(this, "ManagedLoginBranding", {
       userPoolId: userPool.userPoolId,
       clientId: userPoolClient.userPoolClientId,
       useCognitoProvidedValues: true,

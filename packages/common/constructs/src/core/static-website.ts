@@ -5,34 +5,31 @@ import {
   Lazy,
   RemovalPolicy,
   Stack,
-} from 'aws-cdk-lib';
+} from "aws-cdk-lib";
 import {
   Distribution,
   HeadersFrameOption,
   HeadersReferrerPolicy,
   ResponseHeadersPolicy,
   ViewerProtocolPolicy,
-} from 'aws-cdk-lib/aws-cloudfront';
-import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
+} from "aws-cdk-lib/aws-cloudfront";
+import { S3BucketOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
 import {
   BlockPublicAccess,
   Bucket,
-  BucketEncryption,
   IBucket,
   ObjectOwnership,
-} from 'aws-cdk-lib/aws-s3';
+} from "aws-cdk-lib/aws-s3";
 import {
   BucketDeployment,
   CacheControl,
   Source,
-} from 'aws-cdk-lib/aws-s3-deployment';
-import { Construct } from 'constructs';
-import { RuntimeConfig } from './runtime-config.js';
-import { Key } from 'aws-cdk-lib/aws-kms';
-import { CfnWebACL } from 'aws-cdk-lib/aws-wafv2';
-import { suppressRules } from './checkov.js';
+} from "aws-cdk-lib/aws-s3-deployment";
+import { Construct } from "constructs";
+import { RuntimeConfig } from "./runtime-config.js";
+import { suppressRules } from "./checkov.js";
 
-const DEFAULT_RUNTIME_CONFIG_FILENAME = 'runtime-config.json';
+const DEFAULT_RUNTIME_CONFIG_FILENAME = "runtime-config.json";
 
 // Content-Security-Policy enforced on all responses. Restricts scripts and
 // framing to mitigate XSS and clickjacking, while permitting HTTPS/WSS calls
@@ -49,7 +46,7 @@ const CONTENT_SECURITY_POLICY = [
   "object-src 'none'",
   "base-uri 'self'",
   "frame-ancestors 'none'",
-].join('; ');
+].join("; ");
 
 export interface StaticWebsiteProps {
   readonly websiteName: string;
@@ -58,11 +55,6 @@ export interface StaticWebsiteProps {
 
 /**
  * Deploys a Static Website using by default a private S3 bucket as an origin and Cloudfront as the entrypoint.
- *
- * This construct configures a webAcl containing rules that are generally applicable to web applications. This
- * provides protection against exploitation of a wide range of vulnerabilities, including some of the high risk
- * and commonly occurring vulnerabilities described in OWASP publications such as OWASP Top 10.
- *
  */
 export class StaticWebsite extends Construct {
   public readonly websiteBucket: IBucket;
@@ -75,77 +67,22 @@ export class StaticWebsite extends Construct {
     { websiteFilePath, websiteName }: StaticWebsiteProps,
   ) {
     super(scope, id);
-    this.node.setContext(
-      '@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy',
-      true,
-    );
-
-    const websiteKey = new Key(this, 'WebsiteKey', {
-      enableKeyRotation: true,
-    });
-
-    const accessLogsBucket = new Bucket(this, 'AccessLogsBucket', {
-      versioned: false,
-      enforceSSL: true,
-      autoDeleteObjects: true,
-      removalPolicy: RemovalPolicy.DESTROY,
-      encryption: BucketEncryption.KMS,
-      encryptionKey: websiteKey,
-      objectOwnership: ObjectOwnership.OBJECT_WRITER,
-      publicReadAccess: false,
-      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-    });
-    suppressRules(
-      accessLogsBucket,
-      ['CKV_AWS_21'],
-      'Access log bucket does not need versioning enabled',
-    );
-    suppressRules(
-      accessLogsBucket,
-      ['CKV_AWS_18'],
-      'Access log bucket does not need an access log bucket',
-    );
 
     // S3 Bucket to hold website files
-    this.websiteBucket = new Bucket(this, 'WebsiteBucket', {
+    this.websiteBucket = new Bucket(this, "WebsiteBucket", {
       versioned: true,
       enforceSSL: true,
       autoDeleteObjects: true,
       removalPolicy: RemovalPolicy.DESTROY,
-      encryption: BucketEncryption.KMS,
-      encryptionKey: websiteKey,
       objectOwnership: ObjectOwnership.BUCKET_OWNER_ENFORCED,
       publicReadAccess: false,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-      serverAccessLogsPrefix: 'website-access-logs',
-      serverAccessLogsBucket: accessLogsBucket,
     });
-    // Web ACL
-    const wafStack = new CloudfrontWebAcl(this, 'waf');
-
-    // Cloudfront Distribution
-    const logBucket = new Bucket(this, 'DistributionLogBucket', {
-      enforceSSL: true,
-      autoDeleteObjects: true,
-      removalPolicy: RemovalPolicy.DESTROY,
-      encryption: BucketEncryption.KMS,
-      encryptionKey: websiteKey,
-      objectOwnership: ObjectOwnership.BUCKET_OWNER_PREFERRED,
-      publicReadAccess: false,
-      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-      serverAccessLogsPrefix: 'distribution-access-logs',
-      serverAccessLogsBucket: accessLogsBucket,
-    });
-    suppressRules(
-      logBucket,
-      ['CKV_AWS_21'],
-      'Distribution log bucket does not need versioning enabled',
-    );
 
     // Security headers applied to all responses.
     const responseHeadersPolicy = new ResponseHeadersPolicy(
       this,
-      'ResponseHeadersPolicy',
+      "ResponseHeadersPolicy",
       {
         securityHeadersBehavior: {
           strictTransportSecurity: {
@@ -172,14 +109,11 @@ export class StaticWebsite extends Construct {
       },
     );
 
-    const defaultRootObject = 'index.html';
+    const defaultRootObject = "index.html";
     this.cloudFrontDistribution = new Distribution(
       this,
-      'CloudfrontDistribution',
+      "CloudfrontDistribution",
       {
-        webAclId: wafStack.wafArn,
-        enableLogging: true,
-        logBucket: logBucket,
         defaultBehavior: {
           origin: S3BucketOrigin.withOriginAccessControl(this.websiteBucket),
           viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
@@ -202,12 +136,12 @@ export class StaticWebsite extends Construct {
     );
     suppressRules(
       this.cloudFrontDistribution,
-      ['CKV_AWS_174'],
-      'Cloudfront default certificate does not use TLS 1.2',
+      ["CKV_AWS_174"],
+      "Cloudfront default certificate does not use TLS 1.2",
     );
 
     // Deploy Website
-    this.bucketDeployment = new BucketDeployment(this, 'WebsiteDeployment', {
+    this.bucketDeployment = new BucketDeployment(this, "WebsiteDeployment", {
       sources: [Source.asset(websiteFilePath)],
       destinationBucket: this.websiteBucket,
       // Files in the distribution's edge caches will be invalidated after files are uploaded to the destination bucket.
@@ -217,14 +151,14 @@ export class StaticWebsite extends Construct {
 
     // Deploy runtime-config.json separately so it is never cached - clients
     // must always fetch the latest configuration.
-    new BucketDeployment(this, 'RuntimeConfigDeployment', {
+    new BucketDeployment(this, "RuntimeConfigDeployment", {
       sources: [
         Source.data(
           DEFAULT_RUNTIME_CONFIG_FILENAME,
           Lazy.string({
             produce: () =>
               Stack.of(this).toJsonString(
-                RuntimeConfig.ensure(this).get('connection'),
+                RuntimeConfig.ensure(this).get("connection"),
               ),
           }),
         ),
@@ -238,80 +172,19 @@ export class StaticWebsite extends Construct {
 
     suppressRules(
       Stack.of(this),
-      ['CKV_AWS_111'],
-      'CDK Bucket Deployment uses wildcard to deploy arbitrary assets',
+      ["CKV_AWS_111"],
+      "CDK Bucket Deployment uses wildcard to deploy arbitrary assets",
       (c) =>
         CfnResource.isCfnResource(c) &&
-        c.cfnResourceType === 'AWS::IAM::Policy' &&
+        c.cfnResourceType === "AWS::IAM::Policy" &&
         c.node.path.includes(`/Custom::CDKBucketDeployment`),
     );
 
-    new CfnOutput(this, 'DistributionDomainName', {
+    new CfnOutput(this, "DistributionDomainName", {
       value: this.cloudFrontDistribution.domainName,
     });
     new CfnOutput(this, `${websiteName}WebsiteBucketName`, {
       value: this.websiteBucket.bucketName,
     });
-  }
-}
-
-export class CloudfrontWebAcl extends Stack {
-  public readonly wafArn;
-  constructor(scope: Construct, id: string) {
-    super(scope, id, {
-      env: {
-        region: 'us-east-1',
-        account: Stack.of(scope).account,
-      },
-      crossRegionReferences: true,
-    });
-
-    this.wafArn = new CfnWebACL(this, 'WebAcl', {
-      defaultAction: { allow: {} },
-      scope: 'CLOUDFRONT',
-      visibilityConfig: {
-        cloudWatchMetricsEnabled: true,
-        metricName: id,
-        sampledRequestsEnabled: true,
-      },
-      rules: [
-        {
-          name: 'CRSRule',
-          priority: 0,
-          statement: {
-            managedRuleGroupStatement: {
-              name: 'AWSManagedRulesCommonRuleSet',
-              vendorName: 'AWS',
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            metricName: 'MetricForWebACLCDK-CRS',
-            sampledRequestsEnabled: true,
-          },
-          overrideAction: {
-            none: {},
-          },
-        },
-        {
-          name: 'KnownBadInputsRule',
-          priority: 1,
-          statement: {
-            managedRuleGroupStatement: {
-              name: 'AWSManagedRulesKnownBadInputsRuleSet',
-              vendorName: 'AWS',
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            metricName: 'MetricForWebACLCDK-CRS',
-            sampledRequestsEnabled: true,
-          },
-          overrideAction: {
-            none: {},
-          },
-        },
-      ],
-    }).attrArn;
   }
 }

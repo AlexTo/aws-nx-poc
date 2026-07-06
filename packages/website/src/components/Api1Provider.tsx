@@ -2,6 +2,7 @@ import { createContext, FC, PropsWithChildren, useMemo } from 'react';
 import { Api1 } from '../generated/api1/client.gen';
 import { Api1OptionsProxy } from '../generated/api1/options-proxy.gen';
 import { useRuntimeConfig } from '../hooks/useRuntimeConfig';
+import { useSigV4 } from '../hooks/useSigV4';
 
 export const Api1Context = createContext<Api1OptionsProxy | undefined>(
   undefined,
@@ -12,12 +13,14 @@ export const Api1ClientContext = createContext<Api1 | undefined>(undefined);
 const useCreateApi1Client = (): Api1 => {
   const runtimeConfig = useRuntimeConfig();
   const apiUrl = runtimeConfig.apis.Api1;
+  const sigv4Client = useSigV4();
   return useMemo(
     () =>
       new Api1({
         url: apiUrl,
+        fetch: sigv4Client.fetch,
       }),
-    [apiUrl],
+    [apiUrl, sigv4Client],
   );
 };
 

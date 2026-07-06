@@ -15,7 +15,6 @@ import {
   AuthorizationType,
   LambdaIntegration,
   ResponseTransferMode,
-  TokenAuthorizer,
 } from 'aws-cdk-lib/aws-apigateway';
 import { Aspects, Duration, Stack } from 'aws-cdk-lib';
 import {
@@ -23,6 +22,8 @@ import {
   PolicyStatement,
   Effect,
   AnyPrincipal,
+  IGrantable,
+  Grant,
 } from 'aws-cdk-lib/aws-iam';
 import {
   ApiIntegrations,
@@ -121,40 +122,22 @@ export class Api1<
   };
 
   constructor(scope: Construct, id: string, props: Api1Props<TIntegrations>) {
-    const authorizerFunction = new Function(scope, 'Api1AuthorizerFunction', {
-      runtime: Runtime.PYTHON_3_14,
-      handler: 'aws_nx_poc_api1.authorizer.handler',
-      code: Code.fromAsset(
-        url.fileURLToPath(
-          new URL(
-            '../../../../../../dist/packages/api1/bundle-x86',
-            import.meta.url,
-          ),
-        ),
-      ),
-      timeout: Duration.seconds(10),
-      tracing: Tracing.ACTIVE,
-    });
-
     super(scope, id, {
       apiName: 'Api1',
       defaultMethodOptions: {
-        authorizationType: AuthorizationType.CUSTOM,
-        authorizer: new TokenAuthorizer(scope, 'Api1TokenAuthorizer', {
-          handler: authorizerFunction,
-        }),
+        authorizationType: AuthorizationType.IAM,
       },
       deployOptions: {
         tracingEnabled: true,
       },
       policy: new PolicyDocument({
         statements: [
-          // Allow all callers to invoke the API in the resource policy, since auth is handled by the Lambda Authorizer
+          // Open up OPTIONS to allow browsers to make unauthenticated preflight requests
           new PolicyStatement({
             effect: Effect.ALLOW,
             principals: [new AnyPrincipal()],
             actions: ['execute-api:Invoke'],
-            resources: ['execute-api:/*'],
+            resources: ['execute-api:/*/OPTIONS/*'],
           }),
         ],
       }),
@@ -162,6 +145,28 @@ export class Api1<
       ...props,
     });
     Aspects.of(this).add(new AddCorsPreflightAspect(() => this.allowedOrigins));
+  }
+
+  /**
+   * Grants IAM permissions to invoke any method on this API.
+   *
+   * @param grantee - The IAM principal to grant permissions to
+   */
+  public grantInvokeAccess(grantee: IGrantable) {
+    this.api.addToResourcePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        principals: [grantee.grantPrincipal],
+        actions: ['execute-api:Invoke'],
+        resources: ['execute-api:/*'],
+      }),
+    );
+
+    Grant.addToPrincipal({
+      grantee,
+      actions: ['execute-api:Invoke'],
+      resourceArns: [this.api.arnForExecuteApi('*', '/*', '*')],
+    });
   }
 
   /**

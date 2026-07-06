@@ -18,8 +18,13 @@ _runtime_config_key = "MySqlDb"
 _engine = None
 
 
-def _create_engine():
-    ssl_args: dict = {} if is_local_dev() else {"ssl": ssl.create_default_context()}
+def get_engine(rds_ca: str | None = None):
+    """:param rds_ca: Path to a CA certificate bundle for SSL server verification.
+    Required when connecting directly to the RDS cluster without an RDS Proxy."""
+    global _engine
+    if _engine is not None:
+        return _engine
+    ssl_args: dict = {} if is_local_dev() else ({"ssl_ca": rds_ca} if rds_ca else {"ssl": ssl.create_default_context()})
     if is_local_dev():
         cfg = get_local_dev_config()
         url = build_database_url(cfg["dbUser"], cfg["host"], cfg["port"], cfg["dbName"])
@@ -31,9 +36,9 @@ def _create_engine():
             config["port"],
             config["database"],
         )
-    engine = create_engine(url, connect_args=ssl_args)
+    _engine = create_engine(url, connect_args=ssl_args)
 
-    @event.listens_for(engine, "do_connect")
+    @event.listens_for(_engine, "do_connect")
     def provide_password(_dialect, _connection_record, _cargs, connection_params):
         if is_local_dev():
             connection_params["password"] = get_local_dev_config()["dbPassword"]
@@ -48,16 +53,11 @@ def _create_engine():
                 DBUsername=config["dbUser"],
             )
 
-    return engine
-
-
-def get_engine():
-    global _engine
-    if _engine is None:
-        _engine = _create_engine()
     return _engine
 
 
-def get_session() -> Generator[Session]:
-    with Session(get_engine()) as session:
+def get_session(rds_ca: str | None = None) -> Generator[Session]:
+    """:param rds_ca: Path to a CA certificate bundle for SSL server verification.
+    Required when connecting directly to the RDS cluster without an RDS Proxy."""
+    with Session(get_engine(rds_ca)) as session:
         yield session

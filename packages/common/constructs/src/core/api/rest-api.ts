@@ -10,15 +10,13 @@ import {
   Stage,
   ThrottleSettings,
 } from 'aws-cdk-lib/aws-apigateway';
-import { IAspect, Stack } from 'aws-cdk-lib';
+import { IAspect } from 'aws-cdk-lib';
 import {
   CfnLoggingConfiguration,
   CfnWebACL,
   CfnWebACLAssociation,
 } from 'aws-cdk-lib/aws-wafv2';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { Key } from 'aws-cdk-lib/aws-kms';
-import { ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { RuntimeConfig } from '../runtime-config.js';
 import { ApiGatewayAccount } from './api-gateway-account.js';
 import {
@@ -108,17 +106,8 @@ export class RestApi<
     // Account-level CloudWatch role required for REST API access logging
     const account = ApiGatewayAccount.ensure(this);
 
-    // KMS key for encrypting logs at rest, usable by CloudWatch Logs
-    const logsKey = new Key(this, 'LogsKey', {
-      enableKeyRotation: true,
-    });
-    logsKey.grantEncryptDecrypt(
-      new ServicePrincipal(`logs.${Stack.of(this).region}.amazonaws.com`),
-    );
-
     const accessLogs = new LogGroup(this, 'AccessLogs', {
       retention: RetentionDays.ONE_YEAR,
-      encryptionKey: logsKey,
     });
 
     // Create the API Gateway REST API
@@ -208,7 +197,6 @@ export class RestApi<
       const wafLogGroup = new LogGroup(this, 'WebAclLogs', {
         logGroupName: `aws-waf-logs-${apiName}-${this.node.addr.slice(-8)}`,
         retention: RetentionDays.ONE_YEAR,
-        encryptionKey: logsKey,
       });
 
       new CfnLoggingConfiguration(this, 'WebAclLoggingConfig', {

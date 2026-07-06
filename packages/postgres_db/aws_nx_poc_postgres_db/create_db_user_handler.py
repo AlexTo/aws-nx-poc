@@ -16,6 +16,7 @@ def _ensure_database_user(db_user: str) -> None:
         user=secret["username"],
         password=secret["password"],
         sslmode="verify-full",
+        sslrootcert="./global-bundle.pem",
         connect_timeout=10,
     )
     try:
@@ -32,14 +33,13 @@ def _ensure_database_user(db_user: str) -> None:
             cursor.execute(
                 pgsql.SQL(
                     "ALTER ROLE {role} WITH LOGIN;"
-                    "GRANT ALL PRIVILEGES ON DATABASE {db} TO {role};"
-                    "GRANT USAGE, CREATE ON SCHEMA public TO {role};"
-                    "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {role};"
-                    "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {role};"
-                    "GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO {role};"
-                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {role};"
-                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO {role};"
-                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO {role};"
+                    "GRANT CONNECT ON DATABASE {db} TO {role};"
+                    "GRANT USAGE ON SCHEMA public TO {role};"
+                    "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {role};"
+                    "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {role};"
+                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
+                    "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO {role};"
+                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO {role};"
                     "GRANT rds_iam TO {role};"
                 ).format(role=db_user_ident, db=db_name_ident)
             )

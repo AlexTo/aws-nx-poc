@@ -11,8 +11,6 @@ from sqlalchemy import URL
 DatabaseConfig = dict[str, Any]
 DatabaseSecret = dict[str, Any]
 
-_DB_DRIVER = "postgresql+psycopg"
-
 
 def build_database_url(
     username: str,
@@ -22,7 +20,7 @@ def build_database_url(
     password: str | None = None,
 ) -> URL:
     return URL.create(
-        _DB_DRIVER,
+        drivername="postgresql+psycopg",
         username=username,
         password=password,
         host=host,

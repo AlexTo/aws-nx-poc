@@ -1,5 +1,4 @@
 import secrets
-import ssl
 from typing import Any
 
 import pymysql
@@ -15,7 +14,7 @@ def _ensure_database_user(db_user: str) -> None:
         database=secret["dbname"],
         user=secret["username"],
         password=secret["password"],
-        ssl=ssl.create_default_context(),
+        ssl={"ca": "./global-bundle.pem"},
         connect_timeout=10,
     )
     try:
@@ -29,7 +28,7 @@ def _ensure_database_user(db_user: str) -> None:
                 (db_user,),
             )
             cursor.execute(
-                f"GRANT ALL PRIVILEGES ON `{secret['dbname']}`.* TO %s@'%%'",
+                f"GRANT SELECT, INSERT, UPDATE, DELETE ON `{secret['dbname']}`.* TO %s@'%%'",
                 (db_user,),
             )
         connection.commit()

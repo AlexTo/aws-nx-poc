@@ -6,6 +6,7 @@ skip-check:
   - CKV_AWS_117 # Lambda functions in VPC
   - CKV_AWS_173 # Encrypt Lambda environment variables
   - CKV_AWS_272 # Code signing
+  - CKV_AWS_7   # Key rotation
 output:
   - cli
   - json

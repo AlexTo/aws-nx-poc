@@ -1,5 +1,6 @@
 import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import { SubnetType, Vpc } from 'aws-cdk-lib/aws-ec2';
+import { RuntimeNetworkConfiguration } from 'aws-cdk-lib/aws-bedrockagentcore';
 import { Construct } from 'constructs';
 import {
   Api1,
@@ -14,13 +15,12 @@ import {
 
 // This POC is configured for development, not production. Before deploying for real workloads,
 // remove these overrides so the constructs fall back to their production-safe defaults
-// (deletion protection, WAF, credential/key rotation, RDS Proxy, Performance Insights, etc).
+// (deletion protection, WAF, credential rotation, RDS Proxy, Performance Insights, etc).
 const DEV_DATABASE_PROPS = {
   deletionProtection: false,
   removalPolicy: RemovalPolicy.DESTROY,
   enableCredentialRotation: false,
-  enableKeyRotation: false,
-  enableRdsProxy: false,
+  enableRdsProxy: true,
   enablePerformanceInsights: false,
 };
 
@@ -73,11 +73,34 @@ export class ApplicationStack extends Stack {
       mySqlDb.grantConnect(integration.handler);
     });
 
-    const mcpServer = new PyProjectMcpServer(this, 'PyProjectMcpServer');
-    const myAgent = new MyAgent(this, 'MyAgent');
+    const mcpServer = new PyProjectMcpServer(this, 'PyProjectMcpServer', {
+      networkConfiguration: RuntimeNetworkConfiguration.usingVpc(
+        new Construct(this, 'PyProjectMcpServerNetwork'),
+        { vpc, vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS } },
+      ),
+    });
+    const myAgent = new MyAgent(this, 'MyAgent', {
+      networkConfiguration: RuntimeNetworkConfiguration.usingVpc(
+        new Construct(this, 'MyAgentNetwork'),
+        { vpc, vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS } },
+      ),
+    });
 
     // Grant the agent permission to invoke the MCP server
     mcpServer.grantInvokeAccess(myAgent);
+
+    // myAgent queries PostgresDb directly, and mcpServer queries MySqlDb directly
+    // (both via RDS IAM auth), so both need network access and rds-db:connect.
+    postgresDb.allowDefaultPortFrom(
+      myAgent,
+      'Allow MyAgent to connect to PostgresDb',
+    );
+    postgresDb.grantConnect(myAgent);
+    mySqlDb.allowDefaultPortFrom(
+      mcpServer,
+      'Allow PyProjectMcpServer to connect to MySqlDb',
+    );
+    mySqlDb.grantConnect(mcpServer);
 
     // Identity must be created before the website so Cognito auth is present
     // in runtime config when the website is deployed
@@ -91,5 +114,9 @@ export class ApplicationStack extends Stack {
 
     // Grant the authenticated Cognito role permission to invoke the agent
     myAgent.grantInvokeAccess(identity.identityPool.authenticatedRole);
+
+    // Grant the authenticated Cognito role permission to invoke Api1 and Api2
+    api1.grantInvokeAccess(identity.identityPool.authenticatedRole);
+    api2.grantInvokeAccess(identity.identityPool.authenticatedRole);
   }
 }
