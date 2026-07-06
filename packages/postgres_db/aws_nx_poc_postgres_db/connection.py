@@ -1,6 +1,7 @@
 from collections.abc import Generator
 
 import boto3
+import certifi
 from sqlalchemy import event
 from sqlmodel import Session, create_engine
 
@@ -28,7 +29,7 @@ def get_engine(rds_ca: str | None = None):
         if is_local_dev()
         else {
             "sslmode": "verify-full",
-            **({"sslrootcert": rds_ca} if rds_ca else {}),
+            "sslrootcert": rds_ca if rds_ca else certifi.where(),
         }
     )
     if is_local_dev():

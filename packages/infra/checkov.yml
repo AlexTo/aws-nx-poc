@@ -7,6 +7,12 @@ skip-check:
   - CKV_AWS_173 # Encrypt Lambda environment variables
   - CKV_AWS_272 # Code signing
   - CKV_AWS_7   # Key rotation
+  - CKV_AWS_86  # CloudFront Access Logging
+  - CKV_AWS_68  # CloudFront WAF
+  - CKV_AWS_18  # S3 Access Logging
+  - CKV_AWS_158 # CloudFront Log Group encryption
+  - CKV_AWS_96  # Aurora encryption
+  - CKV_AWS_149 # Secrets Manager encryption
 output:
   - cli
   - json

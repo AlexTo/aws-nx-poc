@@ -43,7 +43,8 @@ dependencies = [
   "alembic==1.18.4",
   "psycopg[binary,pool]==3.3.4",
   "boto3==1.43.37",
-  "aws-lambda-powertools==3.31.0"
+  "aws-lambda-powertools==3.31.0",
+  "certifi==2026.6.17"
 ]
 
 [build-system]
