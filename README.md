@@ -1,147 +1,69 @@
 # aws-nx-poc
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) has been successfully created! ✨.
+Proof-of-concept Nx workspace ([@aws/nx-plugin-for-aws](https://awslabs.github.io/nx-plugin-for-aws)) built to explore the **`py#rdb`** generator: what it scaffolds for a Python service talking to a relational database on AWS, and the connection/SSL details that come with connecting to Aurora directly vs. through RDS Proxy.
 
-[Learn more about this workspace setup and the @aws/nx-plugin](https://awslabs.github.io/nx-plugin-for-aws). Now, let's get you up to speed!
+## What this branch demonstrates
 
-## Install Nx Console
+Two Aurora Serverless v2 clusters are generated with `py#rdb`:
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+- **`postgres_db`** — Aurora PostgreSQL, consumed via [psycopg](https://www.psycopg.org/) + [SQLModel](https://sqlmodel.tiangolo.com/).
+- **`my_sql_db`** — Aurora MySQL, consumed via [PyMySQL](https://pymysql.readthedocs.io/) + SQLModel.
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Each generated database package contains:
 
-## Available generators
+- `connection.py` — builds a SQLAlchemy engine, authenticating with **IAM database auth** (`rds.generate_db_auth_token`) rather than a static password.
+- `migration_handler.py` — runs Alembic migrations (`alembic upgrade head`) from a Lambda, triggered once per deploy via a CDK `Trigger`.
+- `create_db_user_handler.py` — a CloudFormation custom resource Lambda that creates/reconciles the least-privilege, IAM-authenticated application DB user.
+- `Dockerfile.migration` / `Dockerfile.create-db-user` — both handlers run as container image Lambdas (`DockerImageFunction`), since Alembic/psycopg/PyMySQL don't need to ship as a zip.
 
-The following list of generators are what is currently available in the `@aws/nx-plugin`:
+The shared CDK construct for both databases is `AuroraDatabase` ([packages/common/constructs/src/core/rdb/aurora.ts](packages/common/constructs/src/core/rdb/aurora.ts)), instantiated per-engine by [`PostgresDb`](packages/common/constructs/src/app/dbs/postgres-db.ts) and [`MySqlDb`](packages/common/constructs/src/app/dbs/my-sql-db.ts).
 
+### RDS Proxy vs. direct connection, and why SSL differs
 
-- **connection**: Integrates a source project with a target project
+`AuroraDatabase` takes an `enableRdsProxy` flag (see `DEV_DATABASE_PROPS` in [application-stack.ts](packages/infra/src/stacks/application-stack.ts)), and this is the crux of what the branch is illustrating:
 
-- **license**: Add LICENSE files and configure source code licence headers
+- **Through RDS Proxy** (`enableRdsProxy: true`): the proxy presents a certificate chained to a publicly trusted root (Amazon Trust Services), so the default OS/`certifi` trust store verifies it fine. No extra CA handling needed.
+- **Direct to the Aurora cluster endpoint** (`enableRdsProxy: false`, the current setting here): the cluster presents a certificate chained to a **private, self-signed "Amazon RDS \<region\> Root CA"** — never published to any public trust store. Verifying it (`sslmode=verify-full` for Postgres, `ssl_verify_cert=True, ssl_verify_identity=True` for MySQL) requires explicitly loading Amazon's [RDS CA bundle](https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem) as the trusted root.
 
-- **py#api**: Create a Python API
+That bundle is wired in two different ways depending on how the Lambda is packaged:
 
-- **py#lambda-function**: Adds a lambda function to a python project
+- **Container image Lambdas** (`CreateDbUserHandler`, `MigrationHandler`, `my_agent`, `mcp_server`): the bundle is fetched straight into the image via `ADD` in the Dockerfile and read from `/opt/global-bundle.pem` at runtime.
+- **Zip-based Lambdas** (`api1`, `api2`): the bundle is mounted via a shared Lambda Layer, [`RdsCaLayer`](packages/common/constructs/src/core/rdb/rds-ca-layer.ts), which downloads the same bundle at synth/bundling time.
 
-- **py#mcp-server**: Generate a Python Model Context Protocol (MCP) server for providing context to Large Language Models
+`get_engine(rds_ca=...)` in each `connection.py` accepts an optional CA path: pass it when connecting directly to the cluster, omit it (falls back to the system trust store) when going through the proxy.
 
-- **py#project**: Generates a Python project
+## Consumers
 
-- **py#agent**: Add an AI Agent to a Python project
+Four different compute types connect to these databases, to cover the range of ways a Python service on AWS typically talks to RDS:
 
-- **terraform#project**: Generates a Terraform project
+| Package | Type | Talks to |
+| --- | --- | --- |
+| [`api1`](packages/api1) | FastAPI on Lambda (`py#api`) | `postgres_db` |
+| [`api2`](packages/api2) | FastAPI on Lambda (`py#api`) | `my_sql_db` |
+| [`my_agent`](packages/py_project/aws_nx_poc_py_project/my_agent) | Bedrock AgentCore agent | `postgres_db` |
+| [`mcp_server`](packages/py_project/aws_nx_poc_py_project/mcp_server) | Bedrock AgentCore MCP server | `my_sql_db` |
 
-- **ts#docs**: Generates a documentation site
+## Sandbox-only settings
 
-- **ts#infra**: Generates a cdk application
-
-- **ts#lambda-function**: Generate a TypeScript lambda function
-
-- **ts#mcp-server**: Generate a TypeScript Model Context Protocol (MCP) server for providing context to Large Language Models
-
-- **ts#nx-generator**: Generator for adding an Nx Generator to an existing TypeScript project
-
-- **ts#nx-plugin**: Generate an Nx Plugin of your own! Build custom generators automatically made available for AI vibe-coding via MCP
-
-- **ts#project**: Generates a TypeScript project
-
-- **ts#website**: Generates a website application
-
-- **ts#website#auth**: Adds auth to an existing website
-
-- **ts#agent**: Add an AI Agent to a TypeScript project
-
-- **ts#api**: Create a TypeScript API
-
-- **ts#rdb**: Create a relational database project
-
-- **ts#dynamodb**: Create a DynamoDB project
-
-You also have the option of using additional [commmunity plugins](https://nx.dev/plugin-registry) as needed.
-
-## Invoking a generator
-
-```sh
-pnpm nx g @aws/nx-plugin:<generator-name>
-```
-
-Alternatively you can use the Nx IDE plugin to invoke your generators.
-
-Refer to the [full documentation](https://awslabs.github.io/nx-plugin-for-aws) for additional guidance for each generator.
+`DEV_DATABASE_PROPS` in [application-stack.ts](packages/infra/src/stacks/application-stack.ts) intentionally disables deletion protection, credential rotation, RDS Proxy, and Performance Insights so the stack is cheap and fast to iterate on. Remove that override before treating any of this as a production reference.
 
 ## Common tasks
 
-### Build a single project
-
 ```sh
+# Build a single project
 pnpm nx build <project-name>
-```
 
-### Build all projects
-
-```sh
+# Build everything
 pnpm nx run-many --target build --all
-# or
-pnpm build
-```
 
-### Run arbitrary task
-
-```sh
+# Run any target against a project
 pnpm nx <target> <project-name>
-```
 
-### Lint (and fix) all projects
-
-```sh
+# Lint (and autofix) everything
 pnpm nx run-many --target lint --configuration=fix --all
-# or
-pnpm lint
+
+# Deploy the sandbox stack
+pnpm nx deploy infra
 ```
 
-## Test all projects (and update snapshots)
-
-```sh
-pnpm nx run-many --target test --all --update
-```
-
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
-
-[More about running tasks in the Nx docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Keep TypeScript project references up to date
-
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` statements). This sync is automatically done when running tasks such as `build`, which require updated references to function correctly.
-
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
-
-```sh
-pnpm nx sync
-```
-
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
-
-```sh
-pnpm nx sync:check
-```
-
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
-
-## Set up CI!
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-pnpm nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [@aws/nx-plugin quick-start](https://awslabs.github.io/nx-plugin-for-aws/en/get_started/quick-start/)
-- [@aws/nx-plugin AI dungeon game](https://awslabs.github.io/nx-plugin-for-aws/en/get_started/tutorials/dungeon-game/overview/)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+[Learn more about this workspace setup and the @aws/nx-plugin](https://awslabs.github.io/nx-plugin-for-aws).
