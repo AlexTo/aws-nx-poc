@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(docker rm *)",
-      "Bash(docker network *)"
+      "Bash(docker network *)",
+      "Bash(docker run --rm --entrypoint python3 public.ecr.aws/lambda/python:3.14 -c ' *)",
+      "Bash(docker run *)",
+      "Bash(python3 -c ' *)",
+      "Bash(aws rds *)"
     ]
   }
 }

@@ -14,7 +14,9 @@ def _ensure_database_user(db_user: str) -> None:
         database=secret["dbname"],
         user=secret["username"],
         password=secret["password"],
-        ssl={"ca": "./global-bundle.pem"},
+        ssl_ca="/opt/global-bundle.pem",
+        ssl_verify_cert=True,
+        ssl_verify_identity=True,
         connect_timeout=10,
     )
     try:

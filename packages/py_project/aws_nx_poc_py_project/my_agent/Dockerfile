@@ -5,6 +5,8 @@ WORKDIR /app
 # Copy bundled package
 COPY . /app
 
+ADD --chmod=644 https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /opt/global-bundle.pem
+
 EXPOSE 8080
 
 ENV PYTHONPATH=/app

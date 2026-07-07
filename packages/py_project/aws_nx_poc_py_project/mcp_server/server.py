@@ -1,9 +1,9 @@
 import os
 
-from aws_nx_poc_my_sql_db.connection import get_engine
+from aws_nx_poc_my_sql_db.connection import session_context
 from aws_nx_poc_my_sql_db.models import ExampleModel
 from mcp.server.fastmcp import FastMCP
-from sqlmodel import Session, select
+from sqlmodel import select
 
 mcp = FastMCP(
     name="PyProjectMcpServer",
@@ -16,7 +16,7 @@ mcp = FastMCP(
 @mcp.tool(name="listEntities", description="Lists entities stored in the MySQL database")
 def list_entities() -> list[ExampleModel]:
     """List all example entities from MySQL"""
-    with Session(get_engine()) as session:
+    with session_context("/opt/global-bundle.pem") as session:
         return list(session.exec(select(ExampleModel)).all())
 
 

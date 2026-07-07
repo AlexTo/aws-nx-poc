@@ -9,6 +9,7 @@ import {
   MySqlDb,
   PostgresDb,
   PyProjectMcpServer,
+  RdsCaLayer,
   UserIdentity,
   Website,
 } from ':aws-nx-poc/common-constructs';
@@ -20,7 +21,7 @@ const DEV_DATABASE_PROPS = {
   deletionProtection: false,
   removalPolicy: RemovalPolicy.DESTROY,
   enableCredentialRotation: false,
-  enableRdsProxy: true,
+  enableRdsProxy: false,
   enablePerformanceInsights: false,
 };
 
@@ -38,11 +39,13 @@ export class ApplicationStack extends Stack {
       vpc,
       ...DEV_DATABASE_PROPS,
     });
+    const rdsCaLayer = new RdsCaLayer(this, 'RdsCaLayer');
 
     const api1 = new Api1(this, 'Api1', {
       enableWaf: false,
       integrations: Api1.defaultIntegrations(this)
         .withDefaultOptions({
+          layers: [rdsCaLayer.layer],
           vpc,
           vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
         })
@@ -60,6 +63,7 @@ export class ApplicationStack extends Stack {
       enableWaf: false,
       integrations: Api2.defaultIntegrations(this)
         .withDefaultOptions({
+          layers: [rdsCaLayer.layer],
           vpc,
           vpcSubnets: { subnetType: SubnetType.PRIVATE_WITH_EGRESS },
         })

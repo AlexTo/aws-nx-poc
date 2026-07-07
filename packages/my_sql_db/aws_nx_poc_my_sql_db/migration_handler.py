@@ -16,7 +16,11 @@ def _run_migrations() -> None:
         password=secret["password"],
     )
     alembic_cfg = Config("alembic.ini")
-    connect_args = {"ssl": {"ca": "./global-bundle.pem"}}
+    connect_args = {
+        "ssl_ca": "/opt/global-bundle.pem",
+        "ssl_verify_cert": True,
+        "ssl_verify_identity": True,
+    }
     engine = create_engine(database_url, poolclass=NullPool, connect_args=connect_args)
     try:
         with engine.connect() as connection:

@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 def get_session_dep() -> Generator[Session]:
     # Pass rds_ca if connecting directly to the RDS cluster without an RDS Proxy.
-    yield from get_session()
+    yield from get_session("/opt/global-bundle.pem")
 
 
 SessionDep = Annotated[Session, Depends(get_session_dep)]

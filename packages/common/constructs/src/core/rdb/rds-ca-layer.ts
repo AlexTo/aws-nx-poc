@@ -1,10 +1,10 @@
-import { DockerImage } from 'aws-cdk-lib';
-import { Code, LayerVersion } from 'aws-cdk-lib/aws-lambda';
-import { execSync } from 'child_process';
-import { Construct } from 'constructs';
+import { DockerImage } from "aws-cdk-lib";
+import { Code, LayerVersion } from "aws-cdk-lib/aws-lambda";
+import { Construct } from "constructs";
+import * as url from "url";
 
 const RDS_CA_BUNDLE_URL =
-  'https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem';
+  "https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem";
 
 /**
  * Lambda Layer containing the Amazon RDS CA bundle (global-bundle.pem).
@@ -19,30 +19,20 @@ export class RdsCaLayer extends Construct {
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
-    this.layer = new LayerVersion(this, 'Layer', {
-      code: Code.fromAsset(__dirname, {
+    this.layer = new LayerVersion(this, "Layer", {
+      code: Code.fromAsset(url.fileURLToPath(new URL(".", import.meta.url)), {
         bundling: {
-          local: {
-            tryBundle(outputDir: string): boolean {
-              try {
-                execSync(
-                  `curl -fsSL "${RDS_CA_BUNDLE_URL}" -o "${outputDir}/global-bundle.pem"`,
-                );
-                return true;
-              } catch {
-                return false;
-              }
-            },
-          },
-          image: DockerImage.fromRegistry('public.ecr.aws/lambda/python:3.14'),
+          image: DockerImage.fromRegistry(
+            "public.ecr.aws/docker/library/python:3.14-alpine",
+          ),
           command: [
-            'bash',
-            '-c',
-            `curl -fsSL "${RDS_CA_BUNDLE_URL}" -o /asset-output/global-bundle.pem`,
+            "python",
+            "-c",
+            `import urllib.request; urllib.request.urlretrieve("${RDS_CA_BUNDLE_URL}", "/asset-output/global-bundle.pem")`,
           ],
         },
       }),
-      description: 'Amazon RDS CA bundle for SSL certificate verification',
+      description: "Amazon RDS CA bundle for SSL certificate verification",
     });
   }
 }

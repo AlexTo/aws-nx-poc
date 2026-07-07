@@ -1,5 +1,6 @@
 import ssl
 from collections.abc import Generator
+from contextlib import contextmanager
 
 import boto3
 from sqlalchemy import event
@@ -24,7 +25,15 @@ def get_engine(rds_ca: str | None = None):
     global _engine
     if _engine is not None:
         return _engine
-    ssl_args: dict = {} if is_local_dev() else ({"ssl_ca": rds_ca} if rds_ca else {"ssl": ssl.create_default_context()})
+    ssl_args: dict = (
+        {}
+        if is_local_dev()
+        else (
+            {"ssl_ca": rds_ca, "ssl_verify_cert": True, "ssl_verify_identity": True}
+            if rds_ca
+            else {"ssl": ssl.create_default_context()}
+        )
+    )
     if is_local_dev():
         cfg = get_local_dev_config()
         url = build_database_url(cfg["dbUser"], cfg["host"], cfg["port"], cfg["dbName"])
@@ -56,8 +65,16 @@ def get_engine(rds_ca: str | None = None):
     return _engine
 
 
-def get_session(rds_ca: str | None = None) -> Generator[Session]:
+@contextmanager
+def session_context(rds_ca: str | None = None) -> Generator[Session]:
     """:param rds_ca: Path to a CA certificate bundle for SSL server verification.
     Required when connecting directly to the RDS cluster without an RDS Proxy."""
     with Session(get_engine(rds_ca)) as session:
+        yield session
+
+
+def get_session(rds_ca: str | None = None) -> Generator[Session]:
+    """:param rds_ca: Path to a CA certificate bundle for SSL server verification.
+    Required when connecting directly to the RDS cluster without an RDS Proxy."""
+    with session_context(rds_ca) as session:
         yield session

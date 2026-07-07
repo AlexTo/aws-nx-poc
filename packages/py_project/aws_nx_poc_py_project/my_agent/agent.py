@@ -4,16 +4,16 @@ from aws_nx_poc_agent_connection import (
     PyProjectMcpServerClientStrands,
     log_model_errors,
 )
-from aws_nx_poc_postgres_db.connection import get_engine
+from aws_nx_poc_postgres_db.connection import session_context
 from aws_nx_poc_postgres_db.models import ExampleModel
-from sqlmodel import Session, select
+from sqlmodel import select
 from strands import Agent, tool
 
 
 @tool(name="listPostgresEntities")
 def list_postgres_entities() -> list[ExampleModel]:
     """List entities stored in the Postgres database"""
-    with Session(get_engine()) as session:
+    with session_context("/opt/global-bundle.pem") as session:
         return list(session.exec(select(ExampleModel)).all())
 
 
