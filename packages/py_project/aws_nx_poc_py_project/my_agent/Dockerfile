@@ -5,7 +5,8 @@ WORKDIR /app
 # Copy bundled package
 COPY . /app
 
-ADD --chmod=644 https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /opt/global-bundle.pem
+ADD https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /usr/local/share/ca-certificates/rds-global-bundle.crt
+RUN update-ca-certificates
 
 EXPOSE 8080
 

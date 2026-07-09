@@ -1,10 +1,10 @@
 import ssl
-from collections.abc import Generator
-from contextlib import contextmanager
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 import boto3
 from sqlalchemy import event
-from sqlmodel import Session, create_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from .utils import (
     build_database_url,
@@ -19,24 +19,14 @@ _runtime_config_key = "MySqlDb"
 _engine = None
 
 
-def get_engine(rds_ca: str | None = None):
-    """:param rds_ca: Path to a CA certificate bundle for SSL server verification.
-    Required when connecting directly to the RDS cluster without an RDS Proxy."""
+def get_engine():
     global _engine
     if _engine is not None:
         return _engine
-    ssl_args: dict = (
-        {}
-        if is_local_dev()
-        else (
-            {"ssl_ca": rds_ca, "ssl_verify_cert": True, "ssl_verify_identity": True}
-            if rds_ca
-            else {"ssl": ssl.create_default_context()}
-        )
-    )
     if is_local_dev():
         cfg = get_local_dev_config()
         url = build_database_url(cfg["dbUser"], cfg["host"], cfg["port"], cfg["dbName"])
+        ssl_args: dict = {}
     else:
         config = get_database_config(_runtime_config_key)
         url = build_database_url(
@@ -45,9 +35,10 @@ def get_engine(rds_ca: str | None = None):
             config["port"],
             config["database"],
         )
-    _engine = create_engine(url, connect_args=ssl_args)
+        ssl_args = {"ssl": ssl.create_default_context()}
+    _engine = create_async_engine(url, connect_args=ssl_args)
 
-    @event.listens_for(_engine, "do_connect")
+    @event.listens_for(_engine.sync_engine, "do_connect")
     def provide_password(_dialect, _connection_record, _cargs, connection_params):
         if is_local_dev():
             connection_params["password"] = get_local_dev_config()["dbPassword"]
@@ -65,16 +56,7 @@ def get_engine(rds_ca: str | None = None):
     return _engine
 
 
-@contextmanager
-def session_context(rds_ca: str | None = None) -> Generator[Session]:
-    """:param rds_ca: Path to a CA certificate bundle for SSL server verification.
-    Required when connecting directly to the RDS cluster without an RDS Proxy."""
-    with Session(get_engine(rds_ca)) as session:
-        yield session
-
-
-def get_session(rds_ca: str | None = None) -> Generator[Session]:
-    """:param rds_ca: Path to a CA certificate bundle for SSL server verification.
-    Required when connecting directly to the RDS cluster without an RDS Proxy."""
-    with session_context(rds_ca) as session:
+@asynccontextmanager
+async def session_context() -> AsyncGenerator[AsyncSession]:
+    async with AsyncSession(get_engine()) as session:
         yield session

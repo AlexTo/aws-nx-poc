@@ -1,41 +1,40 @@
+import asyncio
 import secrets
+import ssl
 from typing import Any
 
-import pymysql
+import asyncmy
 
 from .utils import get_database_secret, with_connection_retry
 
 
-def _ensure_database_user(db_user: str) -> None:
+async def _ensure_database_user(db_user: str) -> None:
     secret = get_database_secret()
-    connection = pymysql.connect(
+    conn = await asyncmy.connect(
         host=secret["host"],
-        port=secret["port"],
-        database=secret["dbname"],
+        port=int(secret["port"]),
+        db=secret["dbname"],
         user=secret["username"],
         password=secret["password"],
-        ssl_ca="/opt/global-bundle.pem",
-        ssl_verify_cert=True,
-        ssl_verify_identity=True,
-        connect_timeout=10,
+        ssl=ssl.create_default_context(),
     )
     try:
-        with connection.cursor() as cursor:
-            cursor.execute(
+        async with conn.cursor() as cursor:
+            await cursor.execute(
                 "CREATE USER IF NOT EXISTS %s@'%%' IDENTIFIED WITH AWSAuthenticationPlugin AS 'RDS'",
                 (db_user,),
             )
-            cursor.execute(
+            await cursor.execute(
                 "ALTER USER %s@'%%' IDENTIFIED WITH AWSAuthenticationPlugin AS 'RDS' REQUIRE SSL",
                 (db_user,),
             )
-            cursor.execute(
+            await cursor.execute(
                 f"GRANT SELECT, INSERT, UPDATE, DELETE ON `{secret['dbname']}`.* TO %s@'%%'",
                 (db_user,),
             )
-        connection.commit()
+        await conn.commit()
     finally:
-        connection.close()
+        conn.close()
 
 
 _PHYSICAL_RESOURCE_ID_PREFIX = "db-user:"
@@ -51,7 +50,7 @@ def handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     db_user = _resolve_db_user(event.get("PhysicalResourceId"))
 
     if event.get("RequestType") != "Delete":
-        with_connection_retry(lambda: _ensure_database_user(db_user))
+        with_connection_retry(lambda: asyncio.run(_ensure_database_user(db_user)))
 
     return {
         "PhysicalResourceId": f"{_PHYSICAL_RESOURCE_ID_PREFIX}{db_user}",

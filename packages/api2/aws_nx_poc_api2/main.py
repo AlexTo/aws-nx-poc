@@ -27,28 +27,28 @@ class ExampleInput(BaseModel):
 
 @app.get("/examples", name="listExamples")
 @tracer.capture_method
-def list_examples(session: SessionDep) -> list[ExampleModel]:
-    return list(session.exec(select(ExampleModel)).all())
+async def list_examples(session: SessionDep) -> list[ExampleModel]:
+    return list((await session.exec(select(ExampleModel))).all())
 
 
 @app.post("/examples", name="addExample")
 @tracer.capture_method
-def add_example(example: ExampleInput, session: SessionDep) -> ExampleModel:
+async def add_example(example: ExampleInput, session: SessionDep) -> ExampleModel:
     db_example = ExampleModel(name=example.name, description=example.description)
     session.add(db_example)
-    session.commit()
-    session.refresh(db_example)
+    await session.commit()
+    await session.refresh(db_example)
     return db_example
 
 
 @app.delete("/examples/{example_id}", name="deleteExample", status_code=204)
 @tracer.capture_method
-def delete_example(example_id: int, session: SessionDep) -> None:
-    example = session.get(ExampleModel, example_id)
+async def delete_example(example_id: int, session: SessionDep) -> None:
+    example = await session.get(ExampleModel, example_id)
     if not example:
         raise HTTPException(status_code=404, detail="Example not found")
-    session.delete(example)
-    session.commit()
+    await session.delete(example)
+    await session.commit()
 
 
 if __name__ == "__main__":

@@ -1,12 +1,20 @@
+import asyncio
+import ssl
+
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 from .utils import build_database_url, get_database_secret, with_connection_retry
 
 
-def _run_migrations() -> None:
+def _apply_migrations(sync_conn, alembic_cfg: Config) -> None:
+    alembic_cfg.attributes["connection"] = sync_conn
+    command.upgrade(alembic_cfg, "head")
+
+
+async def _run_migrations() -> None:
     secret = get_database_secret()
     database_url = build_database_url(
         secret["username"],
@@ -16,15 +24,17 @@ def _run_migrations() -> None:
         password=secret["password"],
     )
     alembic_cfg = Config("alembic.ini")
-    connect_args = {"sslmode": "verify-full", "sslrootcert": "/opt/global-bundle.pem"}
-    engine = create_engine(database_url, poolclass=NullPool, connect_args=connect_args)
+    engine = create_async_engine(
+        database_url,
+        poolclass=NullPool,
+        connect_args={"ssl": ssl.create_default_context()},
+    )
     try:
-        with engine.connect() as connection:
-            alembic_cfg.attributes["connection"] = connection
-            command.upgrade(alembic_cfg, "head")
+        async with engine.begin() as conn:
+            await conn.run_sync(lambda c: _apply_migrations(c, alembic_cfg))
     finally:
-        engine.dispose()
+        await engine.dispose()
 
 
 def handler(_event, _context):
-    with_connection_retry(_run_migrations)
+    with_connection_retry(lambda: asyncio.run(_run_migrations()))

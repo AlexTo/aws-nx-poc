@@ -11,10 +11,10 @@ from strands import Agent, tool
 
 
 @tool(name="listPostgresEntities")
-def list_postgres_entities() -> list[ExampleModel]:
+async def list_postgres_entities() -> list[ExampleModel]:
     """List entities stored in the Postgres database"""
-    with session_context("/opt/global-bundle.pem") as session:
-        return list(session.exec(select(ExampleModel)).all())
+    async with session_context() as session:
+        return list((await session.exec(select(ExampleModel))).all())
 
 
 @contextmanager

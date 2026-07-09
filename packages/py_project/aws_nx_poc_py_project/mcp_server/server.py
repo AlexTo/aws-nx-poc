@@ -14,10 +14,10 @@ mcp = FastMCP(
 
 
 @mcp.tool(name="listEntities", description="Lists entities stored in the MySQL database")
-def list_entities() -> list[ExampleModel]:
+async def list_entities() -> list[ExampleModel]:
     """List all example entities from MySQL"""
-    with session_context("/opt/global-bundle.pem") as session:
-        return list(session.exec(select(ExampleModel)).all())
+    async with session_context() as session:
+        return list((await session.exec(select(ExampleModel))).all())
 
 
 @mcp.resource("example://context", description="Sample Guidance")

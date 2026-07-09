@@ -41,7 +41,7 @@ readme = "README.md"
 dependencies = [
   "sqlmodel==0.0.38",
   "alembic==1.18.4",
-  "pymysql==1.2.0",
+  "asyncmy==0.2.11",
   "boto3==1.43.37",
   "aws-lambda-powertools==3.31.0"
 ]

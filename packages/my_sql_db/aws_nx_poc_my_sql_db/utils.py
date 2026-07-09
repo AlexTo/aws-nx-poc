@@ -11,7 +11,7 @@ from sqlalchemy import URL
 DatabaseConfig = dict[str, Any]
 DatabaseSecret = dict[str, Any]
 
-_DB_DRIVER = "mysql+pymysql"
+_DB_DRIVER = "mysql+asyncmy"
 
 
 def build_database_url(

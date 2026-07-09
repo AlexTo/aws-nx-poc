@@ -1,54 +1,47 @@
+import asyncio
 import secrets
+import ssl
 from typing import Any
 
-import psycopg
-from psycopg import sql as pgsql
+import asyncpg
 
 from .utils import get_database_secret, with_connection_retry
 
 
-def _ensure_database_user(db_user: str) -> None:
+async def _ensure_database_user(db_user: str) -> None:
     secret = get_database_secret()
-    connection = psycopg.connect(
+    conn = await asyncpg.connect(
         host=secret["host"],
-        port=secret["port"],
-        dbname=secret["dbname"],
+        port=int(secret["port"]),
+        database=secret["dbname"],
         user=secret["username"],
         password=secret["password"],
-        sslmode="verify-full",
-        sslrootcert="/opt/global-bundle.pem",
-        connect_timeout=10,
+        ssl=ssl.create_default_context(),
     )
     try:
-        connection.autocommit = False
-        with connection.cursor() as cursor:
-            db_user_ident = pgsql.Identifier(db_user)
-            db_name_ident = pgsql.Identifier(secret["dbname"])
-            cursor.execute(
-                pgsql.SQL("SELECT 1 FROM pg_roles WHERE rolname = %s"),
-                (db_user,),
-            )
-            if cursor.fetchone() is None:
-                cursor.execute(pgsql.SQL("CREATE ROLE {} WITH LOGIN").format(db_user_ident))
-            cursor.execute(
-                pgsql.SQL(
-                    "ALTER ROLE {role} WITH LOGIN;"
-                    "GRANT CONNECT ON DATABASE {db} TO {role};"
-                    "GRANT USAGE ON SCHEMA public TO {role};"
-                    "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {role};"
-                    "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {role};"
-                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public "
-                    "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO {role};"
-                    "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO {role};"
-                    "GRANT rds_iam TO {role};"
-                ).format(role=db_user_ident, db=db_name_ident)
-            )
-        connection.commit()
-    except Exception:
-        connection.rollback()
-        raise
+        quoted = await conn.fetchrow(
+            "SELECT quote_ident($1) AS role_q, quote_ident($2) AS db_q",
+            db_user,
+            secret["dbname"],
+        )
+        role_q, db_q = quoted["role_q"], quoted["db_q"]
+        row = await conn.fetchrow("SELECT 1 FROM pg_roles WHERE rolname = $1", db_user)
+        if row is None:
+            await conn.execute(f"CREATE ROLE {role_q} WITH LOGIN")
+        await conn.execute(f"""
+            ALTER ROLE {role_q} WITH LOGIN;
+            GRANT CONNECT ON DATABASE {db_q} TO {role_q};
+            GRANT USAGE ON SCHEMA public TO {role_q};
+            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {role_q};
+            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {role_q};
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public
+                GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO {role_q};
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public
+                GRANT USAGE, SELECT ON SEQUENCES TO {role_q};
+            GRANT rds_iam TO {role_q};
+        """)
     finally:
-        connection.close()
+        await conn.close()
 
 
 _PHYSICAL_RESOURCE_ID_PREFIX = "db-user:"
@@ -64,7 +57,7 @@ def handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     db_user = _resolve_db_user(event.get("PhysicalResourceId"))
 
     if event.get("RequestType") != "Delete":
-        with_connection_retry(lambda: _ensure_database_user(db_user))
+        with_connection_retry(lambda: asyncio.run(_ensure_database_user(db_user)))
 
     return {
         "PhysicalResourceId": f"{_PHYSICAL_RESOURCE_ID_PREFIX}{db_user}",

@@ -20,7 +20,7 @@ def build_database_url(
     password: str | None = None,
 ) -> URL:
     return URL.create(
-        drivername="postgresql+psycopg",
+        drivername="postgresql+asyncpg",
         username=username,
         password=password,
         host=host,

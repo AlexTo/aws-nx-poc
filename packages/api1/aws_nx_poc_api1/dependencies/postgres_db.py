@@ -1,14 +1,14 @@
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from aws_nx_poc_postgres_db.connection import get_session
+from aws_nx_poc_postgres_db.connection import session_context
 from fastapi import Depends
-from sqlmodel import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
-def get_session_dep() -> Generator[Session]:
-    # Pass rds_ca if connecting directly to the RDS cluster without an RDS Proxy.
-    yield from get_session("/opt/global-bundle.pem")
+async def get_session_dep() -> AsyncGenerator[AsyncSession]:
+    async with session_context() as session:
+        yield session
 
 
-SessionDep = Annotated[Session, Depends(get_session_dep)]
+SessionDep = Annotated[AsyncSession, Depends(get_session_dep)]
