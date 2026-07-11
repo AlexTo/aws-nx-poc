@@ -112,6 +112,6 @@ process.on('SIGTERM', cleanup);
 process.on('SIGINT', cleanup);
 process.on('SIGHUP', cleanup);
 
-logs.on('exit', (code) => {
+logs.on('exit', () => {
   if (!exiting) cleanup();
 });

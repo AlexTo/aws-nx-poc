@@ -11,7 +11,7 @@
   "tags": [],
   "metadata": {
     "generator": "py#project",
-    "ports": [8002, 8082],
+    "ports": [8002, 8081],
     "components": [
       {
         "generator": "py#mcp-server",
@@ -25,7 +25,7 @@
         "generator": "py#agent",
         "path": "aws_nx_poc_py_project/my_agent",
         "name": "my-agent",
-        "port": 8082,
+        "port": 8081,
         "rc": "MyAgent",
         "auth": "iam",
         "protocol": "ag-ui",
@@ -216,20 +216,30 @@
         "commands": ["tsx ./scripts/my-agent/chat.ts"],
         "cwd": "{projectRoot}",
         "env": {
-          "URL": "http://localhost:8082/invocations"
+          "URL": "http://localhost:8081/invocations"
         }
       }
     },
     "my-agent-dev": {
       "executor": "nx:run-commands",
+      "dependsOn": [
+        {
+          "projects": ["aws_nx_poc.postgres_db"],
+          "target": "dev"
+        },
+        {
+          "projects": ["aws_nx_poc.py_project"],
+          "target": "mcp-server-dev"
+        }
+      ],
       "continuous": true,
       "options": {
         "commands": [
-          "uv run fastapi dev aws_nx_poc_py_project/my_agent/main.py --port 8082"
+          "uv run fastapi dev aws_nx_poc_py_project/my_agent/main.py --port 8081"
         ],
         "cwd": "{projectRoot}",
         "env": {
-          "PORT": "8082",
+          "PORT": "8081",
           "LOCAL_DEV": "true"
         }
       }
@@ -254,11 +264,11 @@
       "continuous": true,
       "options": {
         "commands": [
-          "uv run fastapi dev aws_nx_poc_py_project/my_agent/main.py --port 8082"
+          "uv run fastapi dev aws_nx_poc_py_project/my_agent/main.py --port 8081"
         ],
         "cwd": "{projectRoot}",
         "env": {
-          "PORT": "8082"
+          "PORT": "8081"
         }
       }
     },

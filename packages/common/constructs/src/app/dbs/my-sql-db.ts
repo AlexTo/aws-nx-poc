@@ -2,6 +2,13 @@ import * as path from 'path';
 import * as url from 'url';
 import { readFileSync } from 'fs';
 import { Construct } from 'constructs';
+import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
+import {
+  DockerImageCode,
+  DockerImageFunction,
+  Function,
+  FunctionOptions,
+} from 'aws-cdk-lib/aws-lambda';
 import {
   AuroraDatabase,
   AuroraDatabaseEngines,
@@ -19,15 +26,19 @@ const { runtimeConfigKey } = JSON.parse(
   ),
 ) as { runtimeConfigKey: string };
 
+const migrationBundleDir = path.join(
+  findWorkspaceRoot(url.fileURLToPath(new URL(import.meta.url))),
+  'dist/packages/my_sql_db/docker/migration',
+);
+
+const createDbUserBundleDir = path.join(
+  findWorkspaceRoot(url.fileURLToPath(new URL(import.meta.url))),
+  'dist/packages/my_sql_db/docker/create-db-user',
+);
+
 export type MySqlDbProps = Omit<
   AuroraDatabaseProps,
-  | 'databaseName'
-  | 'adminUser'
-  | 'createDbUserBundleDir'
-  | 'framework'
-  | 'engine'
-  | 'runtimeConfigKey'
-  | 'migrationBundleDir'
+  'databaseName' | 'adminUser' | 'runtimeConfigKey' | 'engine'
 >;
 
 /**
@@ -40,16 +51,27 @@ export class MySqlDb extends AuroraDatabase {
       databaseName: 'my_sql_db',
       adminUser: 'dbadmin',
       runtimeConfigKey,
-      migrationBundleDir: path.join(
-        findWorkspaceRoot(url.fileURLToPath(new URL(import.meta.url))),
-        'dist/packages/my_sql_db/docker/migration',
-      ),
-      createDbUserBundleDir: path.join(
-        findWorkspaceRoot(url.fileURLToPath(new URL(import.meta.url))),
-        'dist/packages/my_sql_db/docker/create-db-user',
-      ),
-      framework: 'sqlmodel',
       engine: AuroraDatabaseEngines.mysql({}),
+    });
+  }
+
+  protected override createDbUserHandler(baseProps: FunctionOptions): Function {
+    return new DockerImageFunction(this, 'CreateDbUserHandler', {
+      ...baseProps,
+      code: DockerImageCode.fromImageAsset(createDbUserBundleDir, {
+        platform: Platform.LINUX_ARM64,
+      }),
+    });
+  }
+
+  protected override createMigrationHandler(
+    baseProps: FunctionOptions,
+  ): Function {
+    return new DockerImageFunction(this, 'MigrationHandler', {
+      ...baseProps,
+      code: DockerImageCode.fromImageAsset(migrationBundleDir, {
+        platform: Platform.LINUX_ARM64,
+      }),
     });
   }
 }

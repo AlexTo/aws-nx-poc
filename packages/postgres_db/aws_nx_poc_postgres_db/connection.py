@@ -6,12 +6,7 @@ import boto3
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from .utils import (
-    build_database_url,
-    get_database_config,
-    get_local_dev_config,
-    is_local_dev,
-)
+from .utils import build_database_url, get_database_config, get_local_dev_config, is_local_dev
 
 # Generated: must match runtimeConfigKey in config.json
 _runtime_config_key = "PostgresDb"

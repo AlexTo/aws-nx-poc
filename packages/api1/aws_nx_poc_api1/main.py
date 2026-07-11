@@ -6,7 +6,7 @@ from fastapi import HTTPException, Query
 from pydantic import BaseModel
 from sqlmodel import select
 
-from .dependencies.postgres_db import SessionDep
+from .dependencies.postgres_db import PostgresDbSession
 from .init import app, tracer
 
 
@@ -27,14 +27,14 @@ class ExampleInput(BaseModel):
 
 @app.get("/examples", name="listExamples")
 @tracer.capture_method
-async def list_examples(session: SessionDep) -> list[ExampleModel]:
+async def list_examples(session: PostgresDbSession) -> list[ExampleModel]:
     result = await session.execute(select(ExampleModel))
     return list(result.scalars().all())
 
 
 @app.post("/examples", name="addExample")
 @tracer.capture_method
-async def add_example(example: ExampleInput, session: SessionDep) -> ExampleModel:
+async def add_example(example: ExampleInput, session: PostgresDbSession) -> ExampleModel:
     db_example = ExampleModel(name=example.name, description=example.description)
     session.add(db_example)
     await session.commit()
@@ -44,7 +44,7 @@ async def add_example(example: ExampleInput, session: SessionDep) -> ExampleMode
 
 @app.delete("/examples/{example_id}", name="deleteExample", status_code=204)
 @tracer.capture_method
-async def delete_example(example_id: int, session: SessionDep) -> None:
+async def delete_example(example_id: int, session: PostgresDbSession) -> None:
     example = await session.get(ExampleModel, example_id)
     if not example:
         raise HTTPException(status_code=404, detail="Example not found")

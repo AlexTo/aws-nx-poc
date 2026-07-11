@@ -1,6 +1,6 @@
-import AguiProvider from './components/AguiProvider';
 import { useAuth } from 'react-oidc-context';
 import CognitoAuth from './components/CognitoAuth';
+import AguiProvider from './components/AguiProvider';
 import Api2Provider from './components/Api2Provider';
 import Api1Provider from './components/Api1Provider';
 import QueryClientProvider from './components/QueryClientProvider';

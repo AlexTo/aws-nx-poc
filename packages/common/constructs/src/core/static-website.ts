@@ -5,31 +5,32 @@ import {
   Lazy,
   RemovalPolicy,
   Stack,
-} from "aws-cdk-lib";
+} from 'aws-cdk-lib';
 import {
   Distribution,
   HeadersFrameOption,
   HeadersReferrerPolicy,
   ResponseHeadersPolicy,
   ViewerProtocolPolicy,
-} from "aws-cdk-lib/aws-cloudfront";
-import { S3BucketOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
+} from 'aws-cdk-lib/aws-cloudfront';
+import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
 import {
   BlockPublicAccess,
   Bucket,
+  BucketEncryption,
   IBucket,
   ObjectOwnership,
-} from "aws-cdk-lib/aws-s3";
+} from 'aws-cdk-lib/aws-s3';
 import {
   BucketDeployment,
   CacheControl,
   Source,
-} from "aws-cdk-lib/aws-s3-deployment";
-import { Construct } from "constructs";
-import { RuntimeConfig } from "./runtime-config.js";
-import { suppressRules } from "./checkov.js";
+} from 'aws-cdk-lib/aws-s3-deployment';
+import { Construct } from 'constructs';
+import { RuntimeConfig } from './runtime-config.js';
+import { suppressRules } from './checkov.js';
 
-const DEFAULT_RUNTIME_CONFIG_FILENAME = "runtime-config.json";
+const DEFAULT_RUNTIME_CONFIG_FILENAME = 'runtime-config.json';
 
 // Content-Security-Policy enforced on all responses. Restricts scripts and
 // framing to mitigate XSS and clickjacking, while permitting HTTPS/WSS calls
@@ -46,7 +47,7 @@ const CONTENT_SECURITY_POLICY = [
   "object-src 'none'",
   "base-uri 'self'",
   "frame-ancestors 'none'",
-].join("; ");
+].join('; ');
 
 export interface StaticWebsiteProps {
   readonly websiteName: string;
@@ -69,20 +70,31 @@ export class StaticWebsite extends Construct {
     super(scope, id);
 
     // S3 Bucket to hold website files
-    this.websiteBucket = new Bucket(this, "WebsiteBucket", {
-      versioned: true,
+    this.websiteBucket = new Bucket(this, 'WebsiteBucket', {
+      versioned: false,
       enforceSSL: true,
       autoDeleteObjects: true,
       removalPolicy: RemovalPolicy.DESTROY,
+      encryption: BucketEncryption.S3_MANAGED,
       objectOwnership: ObjectOwnership.BUCKET_OWNER_ENFORCED,
       publicReadAccess: false,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     });
+    suppressRules(
+      this.websiteBucket,
+      ['CKV_AWS_21'],
+      'Dev/POC only - versioning not required for this use case',
+    );
+    suppressRules(
+      this.websiteBucket,
+      ['CKV_AWS_18'],
+      'Dev/POC only - access logging not required for this use case',
+    );
 
     // Security headers applied to all responses.
     const responseHeadersPolicy = new ResponseHeadersPolicy(
       this,
-      "ResponseHeadersPolicy",
+      'ResponseHeadersPolicy',
       {
         securityHeadersBehavior: {
           strictTransportSecurity: {
@@ -109,10 +121,10 @@ export class StaticWebsite extends Construct {
       },
     );
 
-    const defaultRootObject = "index.html";
+    const defaultRootObject = 'index.html';
     this.cloudFrontDistribution = new Distribution(
       this,
-      "CloudfrontDistribution",
+      'CloudfrontDistribution',
       {
         defaultBehavior: {
           origin: S3BucketOrigin.withOriginAccessControl(this.websiteBucket),
@@ -134,31 +146,46 @@ export class StaticWebsite extends Construct {
         ],
       },
     );
+    // See https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/DownloadDistValuesGeneral.html
     suppressRules(
       this.cloudFrontDistribution,
-      ["CKV_AWS_174"],
-      "Cloudfront default certificate does not use TLS 1.2",
+      ['CKV_AWS_174'],
+      'Cloudfront default certificate does not use TLS 1.2',
+    );
+    suppressRules(
+      this.cloudFrontDistribution,
+      ['CKV_AWS_86'],
+      'Dev/POC only - access logging not required for this use case',
+    );
+    suppressRules(
+      this.cloudFrontDistribution,
+      ['CKV_AWS_68'],
+      'Dev/POC only - WAF not required for this use case',
     );
 
     // Deploy Website
-    this.bucketDeployment = new BucketDeployment(this, "WebsiteDeployment", {
+    this.bucketDeployment = new BucketDeployment(this, 'WebsiteDeployment', {
       sources: [Source.asset(websiteFilePath)],
       destinationBucket: this.websiteBucket,
       // Files in the distribution's edge caches will be invalidated after files are uploaded to the destination bucket.
       distribution: this.cloudFrontDistribution,
       memoryLimit: 1024,
+      // This deployment prunes by default; runtime-config.json is managed by the
+      // separate RuntimeConfigDeployment below and must never be swept up as an
+      // "orphan" file relative to this deployment's own source manifest.
+      exclude: [DEFAULT_RUNTIME_CONFIG_FILENAME],
     });
 
     // Deploy runtime-config.json separately so it is never cached - clients
     // must always fetch the latest configuration.
-    new BucketDeployment(this, "RuntimeConfigDeployment", {
+    new BucketDeployment(this, 'RuntimeConfigDeployment', {
       sources: [
         Source.data(
           DEFAULT_RUNTIME_CONFIG_FILENAME,
           Lazy.string({
             produce: () =>
               Stack.of(this).toJsonString(
-                RuntimeConfig.ensure(this).get("connection"),
+                RuntimeConfig.ensure(this).get('connection'),
               ),
           }),
         ),
@@ -172,15 +199,15 @@ export class StaticWebsite extends Construct {
 
     suppressRules(
       Stack.of(this),
-      ["CKV_AWS_111"],
-      "CDK Bucket Deployment uses wildcard to deploy arbitrary assets",
+      ['CKV_AWS_111'],
+      'CDK Bucket Deployment uses wildcard to deploy arbitrary assets',
       (c) =>
         CfnResource.isCfnResource(c) &&
-        c.cfnResourceType === "AWS::IAM::Policy" &&
+        c.cfnResourceType === 'AWS::IAM::Policy' &&
         c.node.path.includes(`/Custom::CDKBucketDeployment`),
     );
 
-    new CfnOutput(this, "DistributionDomainName", {
+    new CfnOutput(this, 'DistributionDomainName', {
       value: this.cloudFrontDistribution.domainName,
     });
     new CfnOutput(this, `${websiteName}WebsiteBucketName`, {

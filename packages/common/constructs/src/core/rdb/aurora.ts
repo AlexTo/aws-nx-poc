@@ -1,17 +1,19 @@
-import { CfnOutput, Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
-import { CustomResource } from "aws-cdk-lib";
-import { IConnectable, IVpc, Port, SubnetType } from "aws-cdk-lib/aws-ec2";
-import { IGrantable, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
-import { Platform } from "aws-cdk-lib/aws-ecr-assets";
+import {
+  CfnOutput,
+  CfnResource,
+  CustomResource,
+  Duration,
+  RemovalPolicy,
+  Stack,
+} from 'aws-cdk-lib';
+import { IConnectable, IVpc, Port, SubnetType } from 'aws-cdk-lib/aws-ec2';
+import { IGrantable, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import {
   Architecture,
-  Code,
-  DockerImageCode,
-  DockerImageFunction,
   Function,
-  Runtime,
+  FunctionOptions,
   Tracing,
-} from "aws-cdk-lib/aws-lambda";
+} from 'aws-cdk-lib/aws-lambda';
 import {
   AuroraMysqlEngineVersion,
   AuroraPostgresEngineVersion,
@@ -23,11 +25,12 @@ import {
   DatabaseProxy,
   DefaultAuthScheme,
   IClusterEngine,
-} from "aws-cdk-lib/aws-rds";
-import { Provider } from "aws-cdk-lib/custom-resources";
-import { Trigger } from "aws-cdk-lib/triggers";
-import { Construct } from "constructs";
-import { RuntimeConfig } from "../runtime-config.js";
+} from 'aws-cdk-lib/aws-rds';
+import { Provider } from 'aws-cdk-lib/custom-resources';
+import { Trigger } from 'aws-cdk-lib/triggers';
+import { Construct } from 'constructs';
+import { RuntimeConfig } from '../runtime-config.js';
+import { suppressRules } from '../checkov.js';
 
 export type AuroraDatabaseEngineVersion =
   | AuroraMysqlEngineVersion
@@ -37,7 +40,7 @@ export interface AuroraDatabaseEngine {
   /**
    * Discriminant identifying the engine type.
    */
-  readonly type: "mysql" | "postgres";
+  readonly type: 'mysql' | 'postgres';
 
   /**
    * Default Aurora engine version used when one is not explicitly provided.
@@ -57,7 +60,7 @@ export class AuroraDatabaseEngines {
     defaultVersion?: AuroraMysqlEngineVersion;
   }): AuroraDatabaseEngine {
     return {
-      type: "mysql",
+      type: 'mysql',
       defaultVersion,
       clusterEngine: (version) =>
         DatabaseClusterEngine.auroraMysql({
@@ -72,7 +75,7 @@ export class AuroraDatabaseEngines {
     defaultVersion?: AuroraPostgresEngineVersion;
   }): AuroraDatabaseEngine {
     return {
-      type: "postgres",
+      type: 'postgres',
       defaultVersion,
       clusterEngine: (version) =>
         DatabaseClusterEngine.auroraPostgres({
@@ -84,12 +87,12 @@ export class AuroraDatabaseEngines {
 
 type _AuroraDatabaseProps = Omit<
   DatabaseClusterProps,
-  | "credentials"
-  | "defaultDatabaseName"
-  | "engine"
-  | "iamAuthentication"
-  | "instanceProps"
-  | "writer"
+  | 'credentials'
+  | 'defaultDatabaseName'
+  | 'engine'
+  | 'iamAuthentication'
+  | 'instanceProps'
+  | 'writer'
 >;
 
 export interface AuroraDatabaseProps extends _AuroraDatabaseProps {
@@ -126,30 +129,9 @@ export interface AuroraDatabaseProps extends _AuroraDatabaseProps {
   readonly runtimeConfigKey: string;
 
   /**
-   * Migration bundle used to create a migration handler Lambda.
-   */
-  readonly migrationBundleDir: string;
-
-  /**
-   * Bundle used to create or reconcile the application database user.
-   */
-  readonly createDbUserBundleDir: string;
-
-  /** ORM framework used by this database project. */
-  readonly framework: "prisma" | "sqlmodel";
-
-  /**
    * Writer instance for the Aurora cluster.
    */
-  readonly writer?: DatabaseClusterProps["writer"];
-
-  /**
-   * Whether the Aurora writer instance is publicly accessible from the internet.
-   * Requires `vpcSubnets` to select public subnets with an internet gateway route.
-   *
-   * @default false
-   */
-  readonly publiclyAccessible?: boolean;
+  readonly writer?: DatabaseClusterProps['writer'];
 
   /**
    * Whether to provision an RDS Proxy in front of the Aurora cluster.
@@ -213,12 +195,8 @@ export abstract class AuroraDatabase extends Construct {
       adminUser,
       databaseName,
       runtimeConfigKey,
-      migrationBundleDir,
-      createDbUserBundleDir,
-      framework,
       vpcSubnets,
       writer,
-      publiclyAccessible = false,
       enableRdsProxy = true,
       enableCredentialRotation = true,
       deletionProtection = true,
@@ -234,29 +212,37 @@ export abstract class AuroraDatabase extends Construct {
 
     this.adminUser = adminUser;
 
-    this.cluster = new DatabaseCluster(this, "DatabaseCluster", {
+    this.cluster = new DatabaseCluster(this, 'DatabaseCluster', {
       ...clusterProps,
       vpc,
       vpcSubnets,
       engine: engine.clusterEngine(engineVersion ?? engine.defaultVersion),
       writer:
         writer ??
-        ClusterInstance.serverlessV2("writer", {
-          publiclyAccessible,
+        ClusterInstance.serverlessV2('writer', {
           enablePerformanceInsights,
         }),
       credentials: Credentials.fromGeneratedSecret(adminUser),
       iamAuthentication: true,
       monitoringInterval: Duration.seconds(5),
       cloudwatchLogsExports: enableCloudwatchLogs
-        ? engine.type === "mysql"
-          ? ["audit", "error", "general", "slowquery"]
-          : ["postgresql"]
+        ? engine.type === 'mysql'
+          ? ['audit', 'error', 'general', 'slowquery']
+          : ['postgresql']
         : undefined,
       defaultDatabaseName: databaseName,
+      storageEncrypted: true,
       deletionProtection,
       removalPolicy,
     });
+    suppressRules(
+      this.cluster,
+      ['CKV_AWS_149'],
+      'Dev/POC only - using default AWS-managed KMS encryption instead of a customer-managed key',
+      (c) =>
+        CfnResource.isCfnResource(c) &&
+        c.cfnResourceType === 'AWS::SecretsManager::Secret',
+    );
 
     if (enableCredentialRotation) {
       this.cluster.addRotationSingleUser({
@@ -268,13 +254,13 @@ export abstract class AuroraDatabase extends Construct {
     }
 
     const proxyRole = enableRdsProxy
-      ? new Role(this, "DatabaseProxyRole", {
-          assumedBy: new ServicePrincipal("rds.amazonaws.com"),
+      ? new Role(this, 'DatabaseProxyRole', {
+          assumedBy: new ServicePrincipal('rds.amazonaws.com'),
         })
       : undefined;
 
     if (enableRdsProxy) {
-      this.proxy = this.cluster.addProxy("DatabaseProxy", {
+      this.proxy = this.cluster.addProxy('DatabaseProxy', {
         vpc,
         vpcSubnets,
         defaultAuthScheme: DefaultAuthScheme.IAM_AUTH,
@@ -285,24 +271,37 @@ export abstract class AuroraDatabase extends Construct {
     const databaseHostname =
       this.proxy?.endpoint ?? this.cluster.clusterEndpoint.hostname;
     const databasePort = this.cluster.clusterEndpoint.port;
-    const createDbUserHandler =
-      framework === "sqlmodel"
-        ? this.createPythonDbUserHandler(vpc, createDbUserBundleDir)
-        : this.createNodeDbUserHandler(vpc, createDbUserBundleDir);
 
+    const commonProps: FunctionOptions = {
+      vpc,
+      timeout: Duration.minutes(5),
+      tracing: Tracing.ACTIVE,
+      architecture: Architecture.ARM_64,
+    };
+
+    const createDbUserHandler = this.createDbUserHandler({
+      ...commonProps,
+      vpcSubnets: {
+        subnetType: SubnetType.PRIVATE_WITH_EGRESS,
+      },
+    });
+    createDbUserHandler.addEnvironment(
+      'DATABASE_SECRET_ARN',
+      this.cluster.secret!.secretArn,
+    );
     this.cluster.connections.allowDefaultPortFrom(
       createDbUserHandler,
-      "Allow the create-db-user handler to connect to the database",
+      'Allow the create-db-user handler to connect to the database',
     );
     this.grantSecretRead(createDbUserHandler);
 
-    const createDbUserProvider = new Provider(this, "CreateDbUserProvider", {
+    const createDbUserProvider = new Provider(this, 'CreateDbUserProvider', {
       onEventHandler: createDbUserHandler,
     });
 
     const createDbUserResource = new CustomResource(
       this,
-      "CreateDbUserResource",
+      'CreateDbUserResource',
       {
         serviceToken: createDbUserProvider.serviceToken,
         properties: {
@@ -311,13 +310,13 @@ export abstract class AuroraDatabase extends Construct {
       },
     );
     createDbUserResource.node.addDependency(this.cluster);
-    this.dbUser = createDbUserResource.getAttString("dbUser");
+    this.dbUser = createDbUserResource.getAttString('dbUser');
     if (this.proxy && proxyRole) {
       this.cluster.grantConnect(proxyRole, this.dbUser);
     }
 
     const rc = RuntimeConfig.ensure(this);
-    rc.set("database", runtimeConfigKey, {
+    rc.set('database', runtimeConfigKey, {
       hostname: databaseHostname,
       port: databasePort,
       database: databaseName,
@@ -326,110 +325,44 @@ export abstract class AuroraDatabase extends Construct {
       region: Stack.of(this).region,
     });
 
-    const migrationHandler =
-      framework === "sqlmodel"
-        ? this.createPythonMigrationHandler(vpc, migrationBundleDir)
-        : this.createNodeMigrationHandler(vpc, migrationBundleDir);
-
+    const migrationHandler = this.createMigrationHandler({
+      ...commonProps,
+      memorySize: 1024,
+    });
+    migrationHandler.addEnvironment(
+      'DATABASE_SECRET_ARN',
+      this.cluster.secret!.secretArn,
+    );
     this.cluster.connections.allowDefaultPortFrom(migrationHandler);
     this.grantSecretRead(migrationHandler);
 
-    const trigger = new Trigger(this, "MigrationTrigger", {
+    const migrationTrigger = new Trigger(this, 'MigrationTrigger', {
       handler: migrationHandler,
     });
-    trigger.node.addDependency(createDbUserResource);
+    migrationTrigger.node.addDependency(createDbUserResource);
 
-    new CfnOutput(this, "ClusterEndpoint", {
+    new CfnOutput(this, 'ClusterEndpoint', {
       value: this.cluster.clusterEndpoint.hostname,
     });
 
     if (this.proxy?.endpoint) {
-      new CfnOutput(this, "ProxyEndpoint", {
+      new CfnOutput(this, 'ProxyEndpoint', {
         value: this.proxy?.endpoint,
       });
     }
   }
 
-  private createPythonDbUserHandler(
-    vpc: IVpc,
-    createDbUserBundleDir: string,
-  ): DockerImageFunction {
-    return new DockerImageFunction(this, "CreateDbUserHandler", {
-      code: DockerImageCode.fromImageAsset(createDbUserBundleDir, {
-        platform: Platform.LINUX_ARM64,
-      }),
-      timeout: Duration.minutes(5),
-      tracing: Tracing.ACTIVE,
-      vpc,
-      vpcSubnets: {
-        subnetType: SubnetType.PRIVATE_WITH_EGRESS,
-      },
-      environment: {
-        DATABASE_SECRET_ARN: this.cluster.secret!.secretArn,
-      },
-      architecture: Architecture.ARM_64,
-    });
-  }
+  /**
+   * Creates the Lambda handler used to create or reconcile the application database user.
+   */
+  protected abstract createDbUserHandler(baseProps: FunctionOptions): Function;
 
-  private createNodeDbUserHandler(
-    vpc: IVpc,
-    createDbUserBundleDir: string,
-  ): Function {
-    return new Function(this, "CreateDbUserHandler", {
-      code: Code.fromAsset(createDbUserBundleDir),
-      handler: "index.handler",
-      runtime: Runtime.NODEJS_LATEST,
-      timeout: Duration.minutes(5),
-      tracing: Tracing.ACTIVE,
-      vpc,
-      vpcSubnets: {
-        subnetType: SubnetType.PRIVATE_WITH_EGRESS,
-      },
-      environment: {
-        DATABASE_SECRET_ARN: this.cluster.secret!.secretArn,
-        NODE_EXTRA_CA_CERTS: "/var/runtime/ca-cert.pem",
-      },
-      architecture: Architecture.ARM_64,
-    });
-  }
-
-  private createPythonMigrationHandler(
-    vpc: IVpc,
-    migrationBundleDir: string,
-  ): DockerImageFunction {
-    return new DockerImageFunction(this, "MigrationHandler", {
-      code: DockerImageCode.fromImageAsset(migrationBundleDir, {
-        platform: Platform.LINUX_ARM64,
-      }),
-      memorySize: 1024,
-      timeout: Duration.minutes(5),
-      tracing: Tracing.ACTIVE,
-      vpc,
-      environment: {
-        DATABASE_SECRET_ARN: this.cluster.secret!.secretArn,
-      },
-      architecture: Architecture.ARM_64,
-    });
-  }
-
-  private createNodeMigrationHandler(
-    vpc: IVpc,
-    migrationBundleDir: string,
-  ): DockerImageFunction {
-    return new DockerImageFunction(this, "MigrationHandler", {
-      code: DockerImageCode.fromImageAsset(migrationBundleDir, {
-        platform: Platform.LINUX_ARM64,
-      }),
-      memorySize: 1024,
-      timeout: Duration.minutes(5),
-      tracing: Tracing.ACTIVE,
-      vpc,
-      environment: {
-        DATABASE_SECRET_ARN: this.cluster.secret!.secretArn,
-      },
-      architecture: Architecture.ARM_64,
-    });
-  }
+  /**
+   * Creates the Lambda handler used to run database migrations.
+   */
+  protected abstract createMigrationHandler(
+    baseProps: FunctionOptions,
+  ): Function;
 
   public allowDefaultPortFrom(other: IConnectable, description?: string): void {
     if (this.proxy) {

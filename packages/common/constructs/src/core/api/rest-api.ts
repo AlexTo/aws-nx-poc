@@ -1,8 +1,6 @@
 import { Construct, IConstruct } from 'constructs';
 import {
-  AccessLogFormat,
   Cors,
-  LogGroupLogDestination,
   Resource,
   RestApi as _RestApi,
   RestApiProps as _RestApiProps,
@@ -11,14 +9,8 @@ import {
   ThrottleSettings,
 } from 'aws-cdk-lib/aws-apigateway';
 import { IAspect } from 'aws-cdk-lib';
-import {
-  CfnLoggingConfiguration,
-  CfnWebACL,
-  CfnWebACLAssociation,
-} from 'aws-cdk-lib/aws-wafv2';
-import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { CfnWebACL, CfnWebACLAssociation } from 'aws-cdk-lib/aws-wafv2';
 import { RuntimeConfig } from '../runtime-config.js';
-import { ApiGatewayAccount } from './api-gateway-account.js';
 import {
   ApiIntegrations,
   OperationDetails,
@@ -103,19 +95,10 @@ export class RestApi<
     super(scope, id);
     this.integrations = integrations;
 
-    // Account-level CloudWatch role required for REST API access logging
-    const account = ApiGatewayAccount.ensure(this);
-
-    const accessLogs = new LogGroup(this, 'AccessLogs', {
-      retention: RetentionDays.ONE_YEAR,
-    });
-
     // Create the API Gateway REST API
     this.api = new _RestApi(this, 'Api', {
       ...props,
       deployOptions: {
-        accessLogDestination: new LogGroupLogDestination(accessLogs),
-        accessLogFormat: AccessLogFormat.jsonWithStandardFields(),
         ...props.deployOptions,
         methodOptions: {
           ...props.deployOptions?.methodOptions,
@@ -128,8 +111,6 @@ export class RestApi<
         },
       },
     });
-    // Ensure the account-level role is configured before the stage is created
-    this.api.deploymentStage.node.addDependency(account.resource);
 
     if (enableWaf) {
       this.webAcl = new CfnWebACL(this, 'WebAcl', {
@@ -191,24 +172,18 @@ export class RestApi<
         resourceArn: this.api.deploymentStage.stageArn,
         webAclArn: this.webAcl.attrArn,
       });
-
-      // Send WAF request logs to CloudWatch. The log group name must start with
-      // `aws-waf-logs-` to satisfy the WAFv2 logging destination requirement.
-      const wafLogGroup = new LogGroup(this, 'WebAclLogs', {
-        logGroupName: `aws-waf-logs-${apiName}-${this.node.addr.slice(-8)}`,
-        retention: RetentionDays.ONE_YEAR,
-      });
-
-      new CfnLoggingConfiguration(this, 'WebAclLoggingConfig', {
-        resourceArn: this.webAcl.attrArn,
-        logDestinationConfigs: [wafLogGroup.logGroupArn],
-      });
     }
 
     suppressRules(
       this.api,
       ['CKV_AWS_120'],
       'Caching not required for this use case',
+      (c) => c instanceof Stage,
+    );
+    suppressRules(
+      this.api,
+      ['CKV_AWS_76'],
+      'Dev/POC only - access logging not required for this use case',
       (c) => c instanceof Stage,
     );
 

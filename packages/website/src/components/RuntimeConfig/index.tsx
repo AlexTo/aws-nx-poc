@@ -24,7 +24,7 @@ const applyOverrides = (runtimeConfig: IRuntimeConfig) => {
   if (import.meta.env.MODE === 'local-dev') {
     runtimeConfig.apis.Api1 = 'http://localhost:8000/';
     runtimeConfig.apis.Api2 = 'http://localhost:8001/';
-    runtimeConfig.agentRuntimes.MyAgent = 'http://localhost:8082/invocations';
+    runtimeConfig.agentRuntimes.MyAgent = 'http://localhost:8081/invocations';
   }
   return runtimeConfig;
 };

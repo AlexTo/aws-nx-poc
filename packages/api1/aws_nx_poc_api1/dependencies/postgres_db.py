@@ -6,9 +6,9 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def get_session_dep() -> AsyncGenerator[AsyncSession]:
+async def get_session() -> AsyncGenerator[AsyncSession]:
     async with session_context() as session:
         yield session
 
 
-SessionDep = Annotated[AsyncSession, Depends(get_session_dep)]
+PostgresDbSession = Annotated[AsyncSession, Depends(get_session)]

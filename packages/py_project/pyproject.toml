@@ -58,10 +58,10 @@ dependencies = [
   "fastapi==0.138.2",
   "strands-agents==1.45.0",
   "strands-agents-tools==0.8.2",
-  "aws-nx-poc-my-sql-db",
-  "aws-nx-poc-postgres-db",
   "ag-ui-protocol==0.1.19",
-  "ag-ui-strands==0.2.2"
+  "ag-ui-strands==0.2.2",
+  "aws-nx-poc-my-sql-db",
+  "aws-nx-poc-postgres-db"
 ]
 
 [build-system]

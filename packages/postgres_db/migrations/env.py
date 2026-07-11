@@ -1,16 +1,15 @@
-# ruff: noqa: I001
 import asyncio
 import json
 import os
 from logging.config import fileConfig
 
 from alembic import context
-
-# Import all models to register them in SQLModel.metadata
-from aws_nx_poc_postgres_db.models import *  # noqa: F401, F403
 from sqlalchemy import URL
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
+
+# Import all models to register them in SQLModel.metadata
+from aws_nx_poc_postgres_db.models import *  # noqa: F401, F403
 
 config = context.config
 
