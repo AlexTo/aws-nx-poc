@@ -17,7 +17,8 @@ mcp = FastMCP(
 async def list_entities() -> list[ExampleModel]:
     """List all example entities from MySQL"""
     async with session_context() as session:
-        return list((await session.exec(select(ExampleModel))).all())
+        result = await session.execute(select(ExampleModel))
+        return list(result.scalars().all())
 
 
 @mcp.resource("example://context", description="Sample Guidance")

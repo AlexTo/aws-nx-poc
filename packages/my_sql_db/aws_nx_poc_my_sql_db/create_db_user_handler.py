@@ -3,14 +3,14 @@ import secrets
 import ssl
 from typing import Any
 
-import asyncmy
+import aiomysql
 
 from .utils import get_database_secret, with_connection_retry
 
 
 async def _ensure_database_user(db_user: str) -> None:
     secret = get_database_secret()
-    conn = await asyncmy.connect(
+    conn = await aiomysql.connect(
         host=secret["host"],
         port=int(secret["port"]),
         db=secret["dbname"],

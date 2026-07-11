@@ -28,7 +28,8 @@ class ExampleInput(BaseModel):
 @app.get("/examples", name="listExamples")
 @tracer.capture_method
 async def list_examples(session: SessionDep) -> list[ExampleModel]:
-    return list((await session.exec(select(ExampleModel))).all())
+    result = await session.execute(select(ExampleModel))
+    return list(result.scalars().all())
 
 
 @app.post("/examples", name="addExample")

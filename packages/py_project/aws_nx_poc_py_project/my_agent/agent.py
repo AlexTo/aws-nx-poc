@@ -14,7 +14,8 @@ from strands import Agent, tool
 async def list_postgres_entities() -> list[ExampleModel]:
     """List entities stored in the Postgres database"""
     async with session_context() as session:
-        return list((await session.exec(select(ExampleModel))).all())
+        result = await session.execute(select(ExampleModel))
+        return list(result.scalars().all())
 
 
 @contextmanager
