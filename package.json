@@ -13,17 +13,17 @@
   },
   "private": true,
   "dependencies": {
-    "@aws/nx-plugin": "1.0.0-rc.6"
+    "@aws/nx-plugin": "1.0.0-rc.50"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.16",
-    "@nx/js": "22.7.5",
-    "@nx/workspace": "22.7.5",
+    "@biomejs/biome": "2.5.3",
+    "@nx/js": "23.1.0",
+    "@nx/workspace": "23.1.0",
     "@swc-node/register": "~1.11.1",
-    "@swc/core": "~1.15.5",
+    "@swc/core": "~1.15.43",
     "@swc/helpers": "~0.5.18",
     "husky": "9.1.7",
-    "nx": "22.7.5",
+    "nx": "23.1.0",
     "tslib": "^2.3.0",
     "typescript": "6.0.3"
   },

@@ -5,6 +5,8 @@ allowBuilds:
   esbuild: true
   nx: true
   sharp: true
+minimumReleaseAgeExclude:
+  - '@aws/nx-plugin@1.0.0-rc.50'
 onlyBuiltDependencies:
   - '@swc/core'
   - esbuild
